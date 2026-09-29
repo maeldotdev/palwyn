@@ -72,3 +72,20 @@ const stepObserver = new IntersectionObserver((entries) => {
 }, { rootMargin: "-45% 0px -45% 0px" });
 steps.forEach((s) => stepObserver.observe(s));
 steps[0].classList.add("on");
+
+// Ko-fi tip dialog. The iframe is only created on the first click, so nothing from ko-fi.com loads before that.
+// Without JS (or <dialog>) the triggers stay plain links to the Ko-fi page.
+const tip = document.getElementById("tip");
+document.querySelectorAll("[data-tip]").forEach((a) => a.addEventListener("click", (e) => {
+  if (!tip.showModal) return;
+  e.preventDefault();
+  const slot = tip.querySelector(".tip-frame");
+  if (!slot.firstChild) {
+    const f = document.createElement("iframe");
+    f.src = "https://ko-fi.com/mael22/?hidefeed=true&widget=true&embed=true&preview=true";
+    f.title = "Support Palwyn on Ko-fi";
+    slot.append(f);
+  }
+  tip.showModal();
+}));
+tip.addEventListener("click", (e) => { if (e.target === tip) tip.close(); }); // backdrop click

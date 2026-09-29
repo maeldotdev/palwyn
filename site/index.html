@@ -404,15 +404,29 @@
   <svg class="mark get-mark" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" class="mark-tile"/><g fill="none" stroke-width="16" stroke-linejoin="round"><path class="mark-link" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/><path class="mark-phone" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/></g></svg>
   <h2 id="get-h">Get Palwyn</h2>
   <p>The first public release is being tested now. It will be free on GitHub, for Windows and Android.</p>
-  <a class="btn" href="https://github.com/maeldotdev/palwyn"><svg class="i"><use href="#i-github-logo"/></svg> View source</a>
+  <div class="get-ctas">
+    <a class="btn" href="https://github.com/maeldotdev/palwyn"><svg class="i"><use href="#i-github-logo"/></svg> View source</a>
+    <a class="btn btn-ghost" href="https://ko-fi.com/mael22" data-tip aria-haspopup="dialog">Support Palwyn on Ko-fi</a>
+  </div>
 </section>
 
 </main>
 
 <footer class="foot">
   <span>© 2026 Mael. GPL-3.0.</span>
+  <a href="https://ko-fi.com/mael22" data-tip aria-haspopup="dialog">Support</a>
   <span>This site has no trackers or cookies.</span>
 </footer>
+
+<!-- Ko-fi tip dialog. The iframe is added by main.js on first open, so nothing from ko-fi.com loads before a click. -->
+<dialog class="tip" id="tip" aria-labelledby="tip-h">
+  <div class="tip-head">
+    <h2 id="tip-h">Support Palwyn</h2>
+    <form method="dialog"><button class="theme-btn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></form>
+  </div>
+  <div class="tip-frame"></div>
+  <p class="tip-note">This panel is served by Ko-fi and follows Ko-fi's privacy policy. <a href="https://ko-fi.com/mael22" target="_blank" rel="noopener">Open on Ko-fi</a></p>
+</dialog>
 
 <script src="main.js" defer></script>
 </body>

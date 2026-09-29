@@ -396,9 +396,26 @@ img { display: block; max-width: 100%; }
 .get-mark { width: 72px; height: 72px; }
 .get h2 { font-size: clamp(44px, 6vw, 80px); }
 .get p { color: var(--ink-2); font-size: 19px; max-width: 44ch; }
-.get .btn { margin-top: 12px; }
+.get-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 
 .foot { max-width: 1280px; margin: 0 auto; padding: 32px var(--pad) 48px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--ink-3); font-size: 14px; border-top: 1px solid var(--line); }
+.foot a { color: var(--ink-2); text-underline-offset: 3px; margin-right: auto; }
+
+/* ---------- tip dialog ---------- */
+.tip { width: min(452px, calc(100% - 2 * var(--pad))); max-height: calc(100dvh - 2 * var(--pad)); overflow: auto; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); color: var(--ink); box-shadow: var(--shadow); }
+.tip::backdrop { background: rgb(12 12 14 / .6); }
+body:has(.tip[open]) { overflow: hidden; }
+.tip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.tip-head h2 { font-size: 22px; }
+.tip-frame { min-height: 712px; border-radius: var(--r); background: var(--bg-2); overflow: hidden; }
+.tip-frame iframe { display: block; width: 100%; height: 712px; border: 0; }
+.tip-note { margin-top: 12px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+@media (prefers-reduced-motion: no-preference) {
+  .tip[open] { animation: tip-in .35s var(--ease); }
+  .tip[open]::backdrop { animation: tip-fade .35s var(--ease); }
+}
+@keyframes tip-in { from { opacity: 0; transform: translateY(16px) scale(.98); } }
+@keyframes tip-fade { from { opacity: 0; } }
 
 /* ---------- reveal ---------- */
 [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
@@ -437,7 +454,7 @@ img { display: block; max-width: 100%; }
 }
 @media (max-width: 520px) {
   body { font-size: 16px; }
-  .ctas .btn { flex: 1 1 100%; justify-content: center; }
+  .ctas .btn, .get-ctas .btn { flex: 1 1 100%; justify-content: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
