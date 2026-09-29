@@ -11,8 +11,8 @@ android {
         applicationId = "dev.palwyn"
         minSdk = 29
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.13.0"
+        versionCode = 4
+        versionName = "0.14.0"
     }
 
     buildTypes {
@@ -21,8 +21,18 @@ android {
             versionNameSuffix = "-dev"
         }
         release {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // ponytail: no R8 shrinking, so reflection-based code can't break in release builds the
+            // debug build never exercised; the APK is bigger. Turn it on once release builds get device tests.
+            isMinifyEnabled = false
+            // Release signing key, given by the release workflow (tools/make-release-keys.ps1 creates it).
+            System.getenv("PALWYN_KEYSTORE")?.let { path ->
+                signingConfig = signingConfigs.create("release") {
+                    storeFile = file(path)
+                    storePassword = System.getenv("PALWYN_KEYSTORE_PASSWORD")
+                    keyAlias = "palwyn"
+                    keyPassword = System.getenv("PALWYN_KEYSTORE_PASSWORD")
+                }
+            }
         }
     }
 

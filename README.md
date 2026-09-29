@@ -72,7 +72,7 @@ The full threat model, what is stored where, and the results of the security aud
 
 ## Download
 
-Palwyn hasn't had its first release yet. Builds for Windows and Android will be published on the [Releases](https://github.com/maeldotdev/palwyn/releases) page. Until then you can build it yourself; see below.
+Get the Windows and Android apps from the [Releases](https://github.com/maeldotdev/palwyn/releases) page, then follow the [installation guide](docs/install.md). Or build it yourself; see below.
 
 ## Build from source
 
@@ -109,6 +109,7 @@ More detail, including testing on devices, is in [docs/development.md](docs/deve
 - [Security model and audit](docs/security.md)
 - [Feature matrix](docs/feature-matrix.md)
 - [Reliability](docs/reliability.md) and [performance](docs/performance.md) reports
+- [Installation](docs/install.md), [privacy policy](docs/privacy.md) and [code signing policy](docs/code-signing.md)
 - [Development and testing](docs/development.md)
 
 ## Contributing

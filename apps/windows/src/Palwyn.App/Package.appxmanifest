@@ -9,7 +9,7 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap uap3 uap5 rescap com desktop">
 
-  <Identity Name="Palwyn.Dev" Publisher="CN=PalwynDev" Version="0.13.1.0" />
+  <Identity Name="Palwyn.Dev" Publisher="CN=PalwynDev" Version="0.14.0.0" />
 
   <Properties>
     <DisplayName>Palwyn</DisplayName>

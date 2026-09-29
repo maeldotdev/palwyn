@@ -1,0 +1,103 @@
+# Builds both apps from this repository and puts them in a draft GitHub release.
+# Runs when a version tag (v0.14.0) is pushed, or by hand from the Actions tab (build only, no release).
+# The signing keys come from repository secrets created by tools/make-release-keys.ps1.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: dotnet test apps/windows/tests/Palwyn.Core.Tests
+
+      - name: Build and sign the MSIX
+        shell: pwsh
+        env:
+          PFX: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: |
+          if (-not $env:PFX) { throw 'Secret WINDOWS_PFX_BASE64 is missing: run tools/make-release-keys.ps1' }
+          # Release identity: the dev build is "Palwyn.Dev"; the publisher must match the certificate's subject.
+          $m = 'apps/windows/src/Palwyn.App/Package.appxmanifest'
+          (Get-Content $m -Raw).Replace('Name="Palwyn.Dev" Publisher="CN=PalwynDev"', 'Name="Palwyn" Publisher="CN=Mael"') | Set-Content $m -NoNewline
+          $pfx = "$env:RUNNER_TEMP\sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX))
+          dotnet build apps/windows/src/Palwyn.App/Palwyn.App.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 `
+            -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxBundle=Never `
+            -p:AppxPackageDir="$env:RUNNER_TEMP\out\" -p:AppxPackageSigningEnabled=true `
+            -p:PackageCertificateKeyFile="$pfx" -p:PackageCertificatePassword="$env:PFX_PASSWORD"
+          if ($LASTEXITCODE) { throw 'build failed' }
+          Remove-Item $pfx
+          $dir = Get-ChildItem "$env:RUNNER_TEMP\out" -Directory | Select-Object -First 1
+          # Only the x64 Windows App SDK runtime is needed next to an x64 app.
+          Get-ChildItem "$($dir.FullName)\Dependencies" -Directory | Where-Object Name -ne 'x64' | Remove-Item -Recurse
+          $version = (Select-Xml -Path $m -XPath '//*[local-name()="Identity"]').Node.Version -replace '\.0$', ''
+          New-Item dist -ItemType Directory | Out-Null
+          Compress-Archive "$($dir.FullName)\*" "dist/Palwyn-$version-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+
+      - name: Test and build the signed APK
+        working-directory: apps/android
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PALWYN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then echo "Secret ANDROID_KEYSTORE_BASE64 is missing: run tools/make-release-keys.ps1"; exit 1; fi
+          export PALWYN_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE" | base64 -d > "$PALWYN_KEYSTORE"
+          ./gradlew testDebugUnitTest assembleRelease --no-daemon
+          rm "$PALWYN_KEYSTORE"
+          version=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          mkdir -p ../../dist
+          cp app/build/outputs/apk/release/app-release.apk "../../dist/Palwyn-$version-android.apk"
+          "$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)/apksigner" verify --print-certs "../../dist/Palwyn-$version-android.apk" | head -3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist && sha256sum * > SHA256SUMS.txt && cd ..
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --prerelease \
+            --title "Palwyn ${GITHUB_REF_NAME#v}" --notes-file "docs/releases/${GITHUB_REF_NAME}.md"
