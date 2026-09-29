@@ -1,0 +1,105 @@
+<Window
+    x:Class="Palwyn.App.ScreenWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Phone screen">
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  Focusable, so typing reaches the phone; clicks, drags and the wheel become taps and swipes.  -->
+        <ContentControl
+            x:Name="Surface"
+            Margin="12,12,12,0"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            AutomationProperties.Name="Phone screen"
+            CharacterReceived="Surface_CharacterReceived"
+            IsTabStop="True"
+            KeyDown="Surface_KeyDown"
+            PointerPressed="Surface_PointerPressed"
+            PointerReleased="Surface_PointerReleased"
+            PointerWheelChanged="Surface_PointerWheelChanged"
+            UseSystemFocusVisuals="False">
+            <Grid Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="{StaticResource OverlayCornerRadius}">
+                <Image x:Name="Picture" Stretch="Uniform" />
+                <StackPanel
+                    x:Name="Status"
+                    MaxWidth="300"
+                    Padding="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="12">
+                    <ProgressRing x:Name="Busy" IsActive="True" />
+                    <TextBlock
+                        x:Name="StatusText"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                    <Button
+                        x:Name="Retry"
+                        HorizontalAlignment="Center"
+                        Click="Retry_Click"
+                        Content="Ask again"
+                        Visibility="Collapsed" />
+                </StackPanel>
+            </Grid>
+        </ContentControl>
+
+        <Grid
+            Grid.Row="1"
+            Padding="12,8,12,12"
+            ColumnSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                x:Name="BackButton"
+                AutomationProperties.Name="Back"
+                Click="Back_Click"
+                Style="{StaticResource IconButtonStyle}"
+                ToolTipService.ToolTip="Back (or right-click the screen)">
+                <FontIcon FontSize="16" Glyph="&#xE72B;" />
+            </Button>
+            <Button
+                x:Name="HomeButton"
+                Grid.Column="1"
+                AutomationProperties.Name="Home"
+                Click="Home_Click"
+                Style="{StaticResource IconButtonStyle}"
+                ToolTipService.ToolTip="Home (or middle-click the screen)">
+                <FontIcon FontSize="16" Glyph="&#xE80F;" />
+            </Button>
+            <Button
+                x:Name="RecentsButton"
+                Grid.Column="2"
+                AutomationProperties.Name="Recent apps"
+                Click="Recents_Click"
+                Style="{StaticResource IconButtonStyle}"
+                ToolTipService.ToolTip="Recent apps">
+                <FontIcon FontSize="16" Glyph="&#xE7C4;" />
+            </Button>
+            <TextBlock
+                x:Name="ControlHint"
+                Grid.Column="3"
+                Margin="8,0"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                MaxLines="2"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="Wrap" />
+            <Button
+                Grid.Column="4"
+                Click="Stop_Click"
+                Content="Stop" />
+        </Grid>
+    </Grid>
+</Window>

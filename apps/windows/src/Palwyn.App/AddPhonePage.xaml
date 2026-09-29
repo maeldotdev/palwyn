@@ -1,0 +1,96 @@
+<Page
+    x:Class="Palwyn.App.AddPhonePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:link="using:Palwyn.App.Link">
+
+    <ScrollViewer>
+        <StackPanel
+            MaxWidth="880"
+            Padding="40,24,40,40"
+            HorizontalAlignment="Stretch"
+            Spacing="28">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Add a phone" />
+
+            <Grid ColumnSpacing="32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!--  QR codes need dark modules on a light background to scan reliably, in either theme.  -->
+                <Border
+                    Width="232"
+                    Height="232"
+                    Padding="12"
+                    VerticalAlignment="Top"
+                    Background="White"
+                    CornerRadius="{ThemeResource OverlayCornerRadius}">
+                    <Image x:Name="QrImage" AutomationProperties.Name="Pairing QR code" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Scan with your phone's camera" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        TextWrapping="Wrap">
+                        <Run Text="1. Install Palwyn on your Android phone and open it once." /><LineBreak />
+                        <Run Text="2. Point the phone's camera at this code and tap the Palwyn link." /><LineBreak />
+                        <Run Text="3. Confirm on the phone. Both devices must be on the same Wi-Fi." />
+                    </TextBlock>
+                    <StackPanel
+                        Margin="0,8,0,0"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <ProgressRing
+                            x:Name="Busy"
+                            Width="16"
+                            Height="16"
+                            IsActive="False" />
+                        <TextBlock
+                            x:Name="StatusText"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock
+                        x:Name="ExpiryText"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Spacing="8">
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="No camera?" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Text="On your phone, open Palwyn, tap Pair with a PC, then Pair without a camera. The phone shows up here."
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Name="NoPhonesText"
+                    Margin="0,4,0,0"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="No phones waiting to pair on this network yet." />
+                <ItemsControl x:Name="CodePhones">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="link:DiscoveredPhone">
+                            <Button
+                                Margin="0,0,0,4"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Click="CodePhone_Click"
+                                Tag="{x:Bind}">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <FontIcon FontSize="16" Glyph="&#xE8EA;" />
+                                    <TextBlock Text="{x:Bind Name}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

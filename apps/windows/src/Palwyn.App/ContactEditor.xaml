@@ -1,0 +1,96 @@
+<UserControl
+    x:Class="Palwyn.App.ContactEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Palwyn.App">
+
+    <StackPanel MinWidth="400" Spacing="16">
+        <TextBox
+            x:Name="NameBox"
+            Header="Name"
+            MaxLength="128" />
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Phone numbers" />
+            <ItemsControl x:Name="NumberList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:NumberEdit">
+                        <Grid Margin="0,0,0,8" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                AutomationProperties.Name="Phone number"
+                                InputScope="TelephoneNumber"
+                                MaxLength="64"
+                                PlaceholderText="Phone number"
+                                Text="{x:Bind Number, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <local:ScrollSafeComboBox
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="Number type"
+                                ItemsSource="{x:Bind Types}"
+                                SelectedIndex="{x:Bind TypeIndex, Mode=TwoWay}" />
+                            <Button
+                                Grid.Column="2"
+                                AutomationProperties.Name="Remove number"
+                                Click="RemoveNumber_Click"
+                                Style="{StaticResource IconButtonStyle}"
+                                ToolTipService.ToolTip="Remove">
+                                <FontIcon FontSize="14" Glyph="&#xE711;" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <HyperlinkButton
+                x:Name="AddNumberButton"
+                Padding="0"
+                Click="AddNumber_Click"
+                Content="Add a number" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Emails" />
+            <ItemsControl x:Name="EmailList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:EmailEdit">
+                        <Grid Margin="0,0,0,8" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                AutomationProperties.Name="Email"
+                                InputScope="EmailNameOrAddress"
+                                MaxLength="254"
+                                PlaceholderText="Email"
+                                Text="{x:Bind Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                Grid.Column="1"
+                                AutomationProperties.Name="Remove email"
+                                Click="RemoveEmail_Click"
+                                Style="{StaticResource IconButtonStyle}"
+                                ToolTipService.ToolTip="Remove">
+                                <FontIcon FontSize="14" Glyph="&#xE711;" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <HyperlinkButton
+                x:Name="AddEmailButton"
+                Padding="0"
+                Click="AddEmail_Click"
+                Content="Add an email" />
+        </StackPanel>
+
+        <TextBlock
+            x:Name="ErrorText"
+            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+            TextWrapping="Wrap"
+            Visibility="Collapsed" />
+    </StackPanel>
+</UserControl>

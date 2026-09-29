@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://palwyn.vercel.app/sitemap.xml

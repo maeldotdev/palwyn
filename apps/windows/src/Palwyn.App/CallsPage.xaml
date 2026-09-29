@@ -1,0 +1,131 @@
+<Page
+    x:Class="Palwyn.App.CallsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Palwyn.App">
+
+    <Grid
+        MaxWidth="880"
+        Padding="40,24,40,0"
+        HorizontalAlignment="Stretch"
+        RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Calls" />
+            <Button
+                x:Name="RefreshButton"
+                HorizontalAlignment="Right"
+                AutomationProperties.Name="Refresh"
+                Click="Refresh_Click"
+                Style="{StaticResource IconButtonStyle}"
+                ToolTipService.ToolTip="Refresh">
+                <FontIcon FontSize="16" Glyph="&#xE72C;" />
+            </Button>
+        </Grid>
+
+        <AutoSuggestBox
+            x:Name="Search"
+            Grid.Row="1"
+            Width="320"
+            Margin="0,4,0,4"
+            HorizontalAlignment="Left"
+            AutomationProperties.Name="Search calls"
+            PlaceholderText="Search calls"
+            QueryIcon="Find"
+            TextChanged="Search_TextChanged" />
+
+        <ProgressBar
+            x:Name="LoadingBar"
+            Grid.Row="2"
+            IsIndeterminate="True"
+            Visibility="Collapsed" />
+
+        <ListView
+            x:Name="List"
+            Grid.Row="3"
+            Margin="-16,0,-16,0"
+            SelectionMode="None">
+            <ListView.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate x:DataType="local:CallGroup">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Key}" />
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </ListView.GroupStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:CallRow">
+                    <Grid Padding="0,8" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture
+                            Width="36"
+                            Height="36"
+                            local:ContactPhotos.Number="{x:Bind Number}"
+                            DisplayName="{x:Bind Initials}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{x:Bind Title}"
+                                TextTrimming="CharacterEllipsis"
+                                Visibility="{x:Bind Normal}" />
+                            <TextBlock
+                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{x:Bind Title}"
+                                TextTrimming="CharacterEllipsis"
+                                Visibility="{x:Bind Missed}" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="{x:Bind Detail}" />
+                        </StackPanel>
+                        <TextBlock
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind Time}" />
+                        <Button
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="Contact options"
+                            Click="Contact_Click"
+                            Style="{StaticResource IconButtonStyle}"
+                            ToolTipService.ToolTip="Add to contacts, edit or delete">
+                            <FontIcon FontSize="16" Glyph="&#xE712;" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+            <ListView.Footer>
+                <Button
+                    x:Name="MoreButton"
+                    Margin="16,8,16,32"
+                    Click="More_Click"
+                    Content="Show older calls"
+                    Visibility="Collapsed" />
+            </ListView.Footer>
+        </ListView>
+
+        <local:Skeleton
+            x:Name="Placeholder"
+            Grid.Row="3"
+            Visibility="Collapsed" />
+        <local:StateView
+            x:Name="State"
+            Grid.Row="3"
+            Visibility="Collapsed" />
+    </Grid>
+</Page>

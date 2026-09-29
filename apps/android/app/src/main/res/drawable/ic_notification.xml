@@ -1,0 +1,23 @@
+<!-- The link mark, cropped for the status bar (Android tints it). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <group
+        android:pivotX="128"
+        android:pivotY="128"
+        android:scaleX="1.46"
+        android:scaleY="1.46">
+        <path
+            android:pathData="M155,92L184,92A20,20 0,0 1,204,112L204,144A20,20 0,0 1,184,164L124,164A20,20 0,0 1,104,144L104,112A20,20 0,0 1,124,92L125,92"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="16"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M140,179L140,180A24,24 0,0 1,116,204L76,204A24,24 0,0 1,52,180L52,76A24,24 0,0 1,76,52L116,52A24,24 0,0 1,140,76L140,149"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="16"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

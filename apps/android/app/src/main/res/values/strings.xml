@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="control_service_label">Palwyn PC control</string>
+    <string name="control_service_description">Lets your paired PC tap, swipe and type on this phone, only while you show this screen on that PC and the Palwyn setting \"Let my PC control this phone\" is on. It reads only the text field you type into from the PC, to add your typing, and keeps nothing.</string>
+</resources>

@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Palwyn.App/Palwyn.App.csproj" />
+    <Project Path="src/Palwyn.Core/Palwyn.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Palwyn.Core.Tests/Palwyn.Core.Tests.csproj" />
+  </Folder>
+</Solution>

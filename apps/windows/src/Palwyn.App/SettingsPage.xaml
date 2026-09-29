@@ -1,0 +1,600 @@
+<Page
+    x:Class="Palwyn.App.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Palwyn.App">
+
+    <ScrollViewer>
+        <StackPanel
+            MaxWidth="880"
+            Padding="40,24,40,40"
+            HorizontalAlignment="Stretch"
+            Spacing="4">
+            <TextBlock
+                Margin="0,0,0,24"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="Settings" />
+
+            <TextBlock
+                Margin="0,0,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Your phones" />
+            <ItemsControl x:Name="PhoneList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:PhoneRow">
+                        <Grid Style="{StaticResource SettingRowStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon FontSize="20" Glyph="&#xE8EA;" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Bind Name}" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind Info}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="8">
+                                <Button
+                                    Click="UsePhone_Click"
+                                    Content="Use this phone"
+                                    Visibility="{x:Bind CanUse}" />
+                                <Button
+                                    Click="Address_Click"
+                                    Content="Address"
+                                    ToolTipService.ToolTip="Connect by IP address, for example over a VPN" />
+                                <Button Click="RemovePhone_Click" Content="Remove" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE710;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="AddPhoneTitle" Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock
+                        x:Name="AddPhoneInfo"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <Button
+                    Grid.Column="2"
+                    Click="AddPhone_Click"
+                    Content="Add a phone" />
+            </Grid>
+            <Grid x:Name="SecurityRow" Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE72E;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Encrypted end to end" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="TLS 1.3 with the certificates exchanged when you paired. No other device can pose as your phone or this PC, and nothing passes through a server."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="General" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE7E8;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Start with Windows" />
+                    <TextBlock
+                        x:Name="StartupHint"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="StartupToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Start with Windows"
+                    Toggled="StartupToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE769;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Pause music and videos during calls" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="When your phone rings, whatever is playing on this PC pauses, and plays again when the call ends. Works with apps that show in Windows' media controls."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="PauseMediaToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Pause music and videos during calls"
+                    Toggled="PauseMediaToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE708;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Keep this PC awake while my phone is connected" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="No sleep, screen-off or screensaver while connected. The PC also won't lock itself when idle, so lock it yourself (Windows+L) when you step away."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="KeepAwakeToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Keep this PC awake while my phone is connected"
+                    Toggled="KeepAwakeToggle_Toggled" />
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Phone notifications" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE7E7;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Show as Windows notifications" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="New phone notifications pop up on this PC. The Notifications page lists them either way."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="ToastsToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Show as Windows notifications"
+                    Toggled="ToastsToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE81C;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Keep a history" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="The last 500 phone notifications stay on this PC, searchable under Notifications > History. Turning this off deletes the history."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="HistoryToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Keep a history"
+                    Toggled="HistoryToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE8EA;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Show this PC's notifications on my phone" />
+                    <TextBlock
+                        x:Name="PcNotificationsHint"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="New Windows notifications appear on your phone while it's connected. Windows asks once to let Palwyn read them."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="PcNotificationsToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Show this PC's notifications on my phone"
+                    Toggled="PcNotificationsToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    FontSize="20"
+                    Glyph="&#xE7ED;" />
+                <StackPanel Grid.Column="1" Spacing="8">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Apps turned off" />
+                        <TextBlock
+                            x:Name="MutedHint"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ItemsControl x:Name="MutedList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="local:MutedApp">
+                                <Grid Padding="0,4">
+                                    <TextBlock VerticalAlignment="Center" Text="{x:Bind Name}" />
+                                    <Button
+                                        HorizontalAlignment="Right"
+                                        Click="Unmute_Click"
+                                        Content="Turn on" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Clipboard" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE77F;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Send text and images I copy on this PC to my phone" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Passwords copied from password managers are skipped. Images go too, up to 20 MB. Android doesn't let apps watch its clipboard, so to send from the phone, select text and tap Send to PC, or tap Send clipboard to PC (quick settings, Palwyn notification or app), which also sends a copied image."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="ClipboardToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Send text and images I copy on this PC to my phone"
+                    Toggled="ClipboardToggle_Toggled" />
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Control from your phone" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE962;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Mouse and keyboard" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Use your phone as a touchpad, keyboard and slide clicker (Remote in the phone app). This is full control of this PC, so it's off until you turn it on. It can't type into Windows' sign-in or administrator prompts."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="RemoteInputToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Mouse and keyboard from my phone"
+                    Toggled="RemoteInputToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE8D6;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Music, volume and lock" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Your phone shows what's playing on this PC and can play, pause, skip, set the volume and lock this PC."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch
+                    x:Name="RemoteMediaToggle"
+                    Grid.Column="2"
+                    MinWidth="0"
+                    AutomationProperties.Name="Music, volume and lock from my phone"
+                    Toggled="RemoteMediaToggle_Toggled" />
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    FontSize="20"
+                    Glyph="&#xE756;" />
+                <StackPanel Grid.Column="1" Spacing="8">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Commands" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="Your phone can run these on this PC with a tap, as you (Command Prompt). It sees only their names."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Click="AddCommand_Click"
+                            Content="Add command" />
+                    </Grid>
+                    <ItemsControl x:Name="CommandList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="local:RemoteCommand">
+                                <Grid Padding="0,4" ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            FontFamily="Consolas"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind Command}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="1"
+                                        Click="RemoveCommand_Click"
+                                        Content="Remove"
+                                        Tag="{x:Bind Id}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Saving" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE896;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Files from your phone (documents and everything else)" />
+                    <TextBlock
+                        x:Name="FilesPath"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel
+                    Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        Click="OpenFolder_Click"
+                        Content="Open"
+                        Tag="files" />
+                    <Button
+                        Click="ChangeFolder_Click"
+                        Content="Change"
+                        Tag="files" />
+                </StackPanel>
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE91B;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Photos and videos from your phone" />
+                    <TextBlock
+                        x:Name="PhotosPath"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel
+                    Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        Click="OpenFolder_Click"
+                        Content="Open"
+                        Tag="photos" />
+                    <Button
+                        Click="ChangeFolder_Click"
+                        Content="Change"
+                        Tag="photos" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Appearance" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE790;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Theme" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Applies to the Palwyn window and tray popup." />
+                </StackPanel>
+                <local:ScrollSafeComboBox
+                    x:Name="ThemeBox"
+                    Grid.Column="2"
+                    MinWidth="180"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Theme"
+                    SelectionChanged="ThemeBox_SelectionChanged">
+                    <ComboBoxItem Content="Dark" Tag="Dark" />
+                    <ComboBoxItem Content="Light" Tag="Light" />
+                    <ComboBoxItem Content="Use Windows setting" Tag="Default" />
+                </local:ScrollSafeComboBox>
+            </Grid>
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon FontSize="20" Glyph="&#xE7F4;" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Transparency" />
+                    <TextBlock
+                        x:Name="TransparencyHint"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <Slider
+                    x:Name="TransparencySlider"
+                    Grid.Column="2"
+                    Width="180"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Transparency"
+                    Maximum="100"
+                    Minimum="0"
+                    StepFrequency="5"
+                    ValueChanged="TransparencySlider_ValueChanged" />
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="Privacy" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    FontSize="20"
+                    Glyph="&#xE1F6;" />
+                <StackPanel Grid.Column="1" Spacing="10">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Your phone data stays between your phone and this PC." />
+                    <StackPanel Spacing="6">
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Where it goes: straight over your Wi-Fi. There is no account, no cloud storage and no server."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="What's kept here: settings, app icons, a log without any message or clipboard content, and only the photos and files you save. Calls, messages and notifications are read from the phone when shown and never stored."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Clipboard: sent only while the setting above is on, never password-manager copies. The phone sends its clipboard only when you tap send."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Permissions: each feature works only after you allow it on the phone, and you can take any of them back in Android settings."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Revoking: Remove this phone above, or remove this PC on the phone. Both forget each other's keys."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock
+                Margin="0,24,0,8"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="About" />
+            <Grid Style="{StaticResource SettingRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image
+                    Width="20"
+                    Height="20"
+                    Source="{ThemeResource AppLogo}" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Palwyn" />
+                    <TextBlock
+                        x:Name="VersionText"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                </StackPanel>
+                <Button
+                    Grid.Column="2"
+                    Click="OpenLogs_Click"
+                    Content="Open log folder" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

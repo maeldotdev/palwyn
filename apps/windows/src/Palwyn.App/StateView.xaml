@@ -1,0 +1,40 @@
+<UserControl
+    x:Class="Palwyn.App.StateView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--  One look for every "nothing to show" moment: offline, permission needed, empty, failed.  -->
+    <StackPanel
+        MaxWidth="420"
+        Margin="0,48,0,0"
+        HorizontalAlignment="Left"
+        Spacing="12">
+        <Border
+            Width="48"
+            Height="48"
+            HorizontalAlignment="Left"
+            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+            CornerRadius="{ThemeResource OverlayCornerRadius}">
+            <FontIcon
+                x:Name="Icon"
+                FontSize="22"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Border>
+        <StackPanel Spacing="4">
+            <TextBlock
+                x:Name="TitleText"
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                x:Name="BodyText"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+        <Button
+            x:Name="ActionButton"
+            Margin="0,4,0,0"
+            Click="Action_Click"
+            Visibility="Collapsed" />
+    </StackPanel>
+</UserControl>

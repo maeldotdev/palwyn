@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Palwyn" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- The "Send to PC" sheet floats over the app the user shared from. -->
+    <style name="Theme.Palwyn.Share" parent="Theme.Palwyn">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+    <!-- App icon: light tile by day, dark tile at night (values-night). -->
+    <color name="launcher_background">#FFFAFAFA</color>
+    <color name="logo_phone">#FF18181B</color>
+    <color name="logo_link">#FF12A67C</color>
+</resources>

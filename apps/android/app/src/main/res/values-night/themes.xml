@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Palwyn" parent="android:Theme.Material.NoActionBar" />
+    <color name="launcher_background">#FF18181B</color>
+    <color name="logo_phone">#FFFAFAFA</color>
+    <color name="logo_link">#FF2ED3A1</color>
+</resources>

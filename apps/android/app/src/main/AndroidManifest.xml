@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Satisfies the Android 14 prerequisite for the connectedDevice foreground-service type. -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Keep the CPU and Wi-Fi awake while a PC is connected, so the link survives the screen being off. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Calls: call state, caller number and call history, answer/decline/end, contact names. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Contacts: add, edit and delete from the PC. -->
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <!-- Messages: read the SMS store, send SMS. New messages are noticed by watching the store, so no RECEIVE_SMS. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Photos and videos: browse and copy to the PC. Android 14+ may grant only the items the user picks. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- Bluetooth on/off for the PC dashboard; a normal (install-time) permission, not needed from Android 12. -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+
+    <!-- Notification mirroring shows app names and icons; launcher apps are the ones that matter. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- "Take a photo" from the PC opens the phone's camera app. -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".PalwynApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Palwyn"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Palwyn">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- The PC's pairing QR code: palwyn://pair?... (scanned with any camera app). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="palwyn" android:host="pair" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".link.LinkService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- Share > Palwyn from any app: files, text or a link go to the connected PC. -->
+        <activity
+            android:name=".drop.ShareActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="Palwyn"
+            android:theme="@style/Theme.Palwyn.Share">
+            <intent-filter android:label="Send to PC">
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Reads the clipboard for "Send clipboard to PC": Android 10+ requires a focused screen. -->
+        <activity
+            android:name=".clipboard.ClipboardActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Palwyn.Share" />
+
+        <!-- "Send to PC" in every app's text-selection menu. -->
+        <activity
+            android:name=".clipboard.SendTextActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="Send to PC"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Palwyn.Share">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".clipboard.ClipboardTile"
+            android:exported="true"
+            android:icon="@drawable/ic_notification"
+            android:label="Send clipboard to PC"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".drop.CopyReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".device.RingStopReceiver"
+            android:exported="false" />
+
+        <!-- Enabled by the user in Settings > Notification access. -->
+        <service
+            android:name=".notifications.MirrorListener"
+            android:exported="true"
+            android:label="Palwyn"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".link.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- "Take a photo" from the PC: opens the phone's camera app, then offers the photo to the PC. -->
+        <activity
+            android:name=".drop.CameraActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Palwyn.Share" />
+
+        <activity
+            android:name=".screen.ScreenActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Palwyn.Share" />
+        <service
+            android:name=".screen.ScreenService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+        <service
+            android:name=".screen.ControlService"
+            android:exported="true"
+            android:label="@string/control_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/control_service" />
+        </service>
+
+        <!-- Our cache files for Android's MMS service, clipboard pastes and the camera app (see res/xml/file_paths). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

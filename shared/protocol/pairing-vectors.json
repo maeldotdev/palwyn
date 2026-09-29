@@ -1,0 +1,23 @@
+{
+  "about": "Pairing crypto vectors (docs/security.md section 5). Hex unless noted. Both platforms must reproduce every value.",
+  "inputs": {
+    "secret": "00112233445566778899aabbccddeeff",
+    "fpPc": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "fpPhone": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "nPc": "0f0e0d0c0b0a09080706050403020100",
+    "nPhone": "f0e1d2c3b4a5968778695a4b3c2d1e0f",
+    "pcName": "DESKTOP 1"
+  },
+  "expected": {
+    "proof": "ff011059f4b76e6c0da604dd85377a810d8f6c285cb5dbe31cb109a039d1329b",
+    "commit": "1f919296baf10802bb9783851d948bf3c048cebcf6bec518db898b2938fc2f20",
+    "code": "870977",
+    "uri": "palwyn://pair?v=1&fp=oaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaE&s=ABEiM0RVZneImaq7zN3u_w&n=DESKTOP%201"
+  },
+  "definitions": {
+    "proof": "HMAC-SHA256(key=secret, ASCII('PB-PAIR-1') || fpPc || fpPhone)",
+    "commit": "SHA-256(nPc)",
+    "code": "m = HMAC-SHA256(key=nPc || nPhone, ASCII('PB-SAS-1') || fpPc || fpPhone); ((big-endian uint32 of m[0..4]) & 0x7FFFFFFF) mod 1000000, zero-padded to 6 digits",
+    "uri": "fp and s are base64url without padding; n is percent-encoded (RFC 3986, space = %20)"
+  }
+}

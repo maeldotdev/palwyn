@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Group texts' MMS files, clipboard images both ways, and photos taken for the PC. -->
+    <cache-path name="mms" path="mms/" />
+    <cache-path name="clip" path="clip/" />
+    <cache-path name="clip-out" path="clip-out/" />
+    <cache-path name="camera" path="camera/" />
+</paths>

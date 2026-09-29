@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palwyn: your Android phone on your Windows PC, free and open source</title>
+<meta name="description" content="Answer calls, text, see notifications and move photos, files and your clipboard between Android and Windows. Direct over your Wi-Fi. No cloud, no account, open source.">
+<link rel="canonical" href="https://palwyn.vercel.app/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#f7f7f8">
+<script>try { if (localStorage.getItem("theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}</script>
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Palwyn">
+<meta property="og:title" content="Palwyn: your Android phone on your Windows PC">
+<meta property="og:description" content="Calls, texts, notifications, photos and files between Android and Windows. Direct over your Wi-Fi. Free and open source.">
+<meta property="og:url" content="https://palwyn.vercel.app/">
+<meta property="og:image" content="https://palwyn.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Palwyn logo with the line: your phone, on your PC.">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="preload" href="fonts/Geist-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Palwyn",
+      "description": "Free, open-source companion that links an Android phone to a Windows PC over the local network: calls, SMS, notifications, photos, files, clipboard and remote control, with no cloud and no account.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Windows 10 (version 2004) or newer, Android 10 or newer",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "url": "https://palwyn.vercel.app/",
+      "image": "https://palwyn.vercel.app/og.png",
+      "author": { "@type": "Person", "name": "Mael" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is Palwyn free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Palwyn is free and open source under the GPL-3.0 licence. There are no paid plans, ads or accounts." } },
+        { "@type": "Question", "name": "Does Palwyn send my data to the cloud?", "acceptedAnswer": { "@type": "Answer", "text": "No. Your phone and PC talk directly over your own network with encrypted, pinned TLS 1.3. There is no Palwyn server and no account." } },
+        { "@type": "Question", "name": "Which phones and PCs does it work with?", "acceptedAnswer": { "@type": "Answer", "text": "Android 10 or newer, and Windows 10 (version 2004) or newer. iPhone is not supported." } },
+        { "@type": "Question", "name": "Can I talk on calls through my PC?", "acceptedAnswer": { "@type": "Answer", "text": "No. You can see who is calling and answer, decline or end calls from the PC, but the call audio stays on the phone. Windows keeps Bluetooth call audio for its own apps." } },
+        { "@type": "Question", "name": "Is Palwyn an alternative to Phone Link?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, for Android phones. It covers calls, messages, notifications, photos and files, and adds a touchpad remote, your phone's screen on the PC and file transfer both ways, without an account." } },
+        { "@type": "Question", "name": "Does it work away from home?", "acceptedAnswer": { "@type": "Answer", "text": "Pairing needs the phone and PC on the same network. After that you can give the PC a VPN address for your phone, such as Tailscale or ZeroTier, and it connects there." } }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-phone-call" viewBox="0 0 256 256"><path d="M144.27,45.93a8,8,0,0,1,9.8-5.66,86.22,86.22,0,0,1,61.66,61.66,8,8,0,0,1-5.66,9.8A8.23,8.23,0,0,1,208,112a8,8,0,0,1-7.73-5.94,70.35,70.35,0,0,0-50.33-50.33A8,8,0,0,1,144.27,45.93Zm-2.33,41.8c13.79,3.68,22.65,12.54,26.33,26.33A8,8,0,0,0,176,120a8.23,8.23,0,0,0,2.07-.27,8,8,0,0,0,5.66-9.8c-5.12-19.16-18.5-32.54-37.66-37.66a8,8,0,1,0-4.13,15.46Zm81.94,95.35A56.26,56.26,0,0,1,168,232C88.6,232,24,167.4,24,88A56.26,56.26,0,0,1,72.92,32.12a16,16,0,0,1,16.62,9.52l21.12,47.15,0,.12A16,16,0,0,1,109.39,104c-.18.27-.37.52-.57.77L88,129.45c7.49,15.22,23.41,31,38.83,38.51l24.34-20.71a8.12,8.12,0,0,1,.75-.56,16,16,0,0,1,15.17-1.4l.13.06,47.11,21.11A16,16,0,0,1,223.88,183.08Zm-15.88-2s-.07,0-.11,0h0l-47-21.05-24.35,20.71a8.44,8.44,0,0,1-.74.56,16,16,0,0,1-15.75,1.14c-18.73-9.05-37.4-27.58-46.46-46.11a16,16,0,0,1,1-15.7,6.13,6.13,0,0,1,.57-.77L96,95.15l-21-47a.61.61,0,0,1,0-.12A40.2,40.2,0,0,0,40,88,128.14,128.14,0,0,0,168,216,40.21,40.21,0,0,0,208,181.07Z"/></symbol>
+<symbol id="i-chat-circle-text" viewBox="0 0 256 256"><path d="M168,112a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,112Zm-8,24H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm72-8A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Zm-16,0A88,88,0,1,0,51.81,172.06a8,8,0,0,1,.66,6.54L40,216,77.4,203.53a7.85,7.85,0,0,1,2.53-.42,8,8,0,0,1,4,1.08A88,88,0,0,0,216,128Z"/></symbol>
+<symbol id="i-bell-ringing" viewBox="0 0 256 256"><path d="M224,71.1a8,8,0,0,1-10.78-3.42,94.13,94.13,0,0,0-33.46-36.91,8,8,0,1,1,8.54-13.54,111.46,111.46,0,0,1,39.12,43.09A8,8,0,0,1,224,71.1ZM35.71,72a8,8,0,0,0,7.1-4.32A94.13,94.13,0,0,1,76.27,30.77a8,8,0,1,0-8.54-13.54A111.46,111.46,0,0,0,28.61,60.32,8,8,0,0,0,35.71,72Zm186.1,103.94A16,16,0,0,1,208,200H167.2a40,40,0,0,1-78.4,0H48a16,16,0,0,1-13.79-24.06C43.22,160.39,48,138.28,48,112a80,80,0,0,1,160,0C208,138.27,212.78,160.38,221.81,175.94ZM150.62,200H105.38a24,24,0,0,0,45.24,0ZM208,184c-10.64-18.27-16-42.49-16-72a64,64,0,0,0-128,0c0,29.52-5.38,53.74-16,72Z"/></symbol>
+<symbol id="i-images" viewBox="0 0 256 256"><path d="M216,40H72A16,16,0,0,0,56,56V72H40A16,16,0,0,0,24,88V200a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V184h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM72,56H216v62.75l-10.07-10.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L72,109.37ZM184,200H40V88H56v80a16,16,0,0,0,16,16H184Zm32-32H72V132l36-36,49.66,49.66a8,8,0,0,0,11.31,0L194.63,120,216,141.38V168ZM160,84a12,12,0,1,1,12,12A12,12,0,0,1,160,84Z"/></symbol>
+<symbol id="i-clipboard-text" viewBox="0 0 256 256"><path d="M168,152a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,152Zm-8-40H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm56-64V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V48A16,16,0,0,1,56,32H92.26a47.92,47.92,0,0,1,71.48,0H200A16,16,0,0,1,216,48ZM96,64h64a32,32,0,0,0-64,0ZM200,48H173.25A47.93,47.93,0,0,1,176,64v8a8,8,0,0,1-8,8H88a8,8,0,0,1-8-8V64a47.93,47.93,0,0,1,2.75-16H56V216H200Z"/></symbol>
+<symbol id="i-paper-plane-tilt" viewBox="0 0 256 256"><path d="M227.32,28.68a16,16,0,0,0-15.66-4.08l-.15,0L19.57,82.84a16,16,0,0,0-2.49,29.8L102,154l41.3,84.87A15.86,15.86,0,0,0,157.74,248q.69,0,1.38-.06a15.88,15.88,0,0,0,14-11.51l58.2-191.94c0-.05,0-.1,0-.15A16,16,0,0,0,227.32,28.68ZM157.83,231.85l-.05.14,0-.07-40.06-82.3,48-48a8,8,0,0,0-11.31-11.31l-48,48L24.08,98.25l-.07,0,.14,0L216,40Z"/></symbol>
+<symbol id="i-cursor-click" viewBox="0 0 256 256"><path d="M88,24V16a8,8,0,0,1,16,0v8a8,8,0,0,1-16,0ZM16,104h8a8,8,0,0,0,0-16H16a8,8,0,0,0,0,16ZM124.42,39.16a8,8,0,0,0,10.74-3.58l8-16a8,8,0,0,0-14.31-7.16l-8,16A8,8,0,0,0,124.42,39.16Zm-96,81.69-16,8a8,8,0,0,0,7.16,14.31l16-8a8,8,0,1,0-7.16-14.31ZM219.31,184a16,16,0,0,1,0,22.63l-12.68,12.68a16,16,0,0,1-22.63,0L132.7,168,115,214.09c0,.1-.08.21-.13.32a15.83,15.83,0,0,1-14.6,9.59l-.79,0a15.83,15.83,0,0,1-14.41-11L32.8,52.92A16,16,0,0,1,52.92,32.8L213,85.07a16,16,0,0,1,1.41,29.8l-.32.13L168,132.69ZM208,195.31,156.69,144h0a16,16,0,0,1,4.93-26l.32-.14,45.95-17.64L48,48l52.2,159.86,17.65-46c0-.11.08-.22.13-.33a16,16,0,0,1,11.69-9.34,16.72,16.72,0,0,1,3-.28,16,16,0,0,1,11.3,4.69L195.31,208Z"/></symbol>
+<symbol id="i-screencast" viewBox="0 0 256 256"><path d="M232,56V200a16,16,0,0,1-16,16H144a8,8,0,0,1,0-16h72V56H40V96a8,8,0,0,1-16,0V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56ZM32,184a8,8,0,0,0,0,16,8,8,0,0,1,8,8,8,8,0,0,0,16,0A24,24,0,0,0,32,184Zm0-32a8,8,0,0,0,0,16,40,40,0,0,1,40,40,8,8,0,0,0,16,0A56.06,56.06,0,0,0,32,152Zm0-32a8,8,0,0,0,0,16,72.08,72.08,0,0,1,72,72,8,8,0,0,0,16,0A88.1,88.1,0,0,0,32,120Z"/></symbol>
+<symbol id="i-speaker-high" viewBox="0 0 256 256"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM32,96H72v64H32ZM144,207.64,88,164.09V91.91l56-43.55Zm54-106.08a40,40,0,0,1,0,52.88,8,8,0,0,1-12-10.58,24,24,0,0,0,0-31.72,8,8,0,0,1,12-10.58ZM248,128a79.9,79.9,0,0,1-20.37,53.34,8,8,0,0,1-11.92-10.67,64,64,0,0,0,0-85.33,8,8,0,1,1,11.92-10.67A79.83,79.83,0,0,1,248,128Z"/></symbol>
+<symbol id="i-lock-key" viewBox="0 0 256 256"><path d="M128,112a28,28,0,0,0-8,54.83V184a8,8,0,0,0,16,0V166.83A28,28,0,0,0,128,112Zm0,40a12,12,0,1,1,12-12A12,12,0,0,1,128,152Zm80-72H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
+<symbol id="i-shield-check" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z"/></symbol>
+<symbol id="i-wifi-high" viewBox="0 0 256 256"><path d="M140,204a12,12,0,1,1-12-12A12,12,0,0,1,140,204ZM237.08,87A172,172,0,0,0,18.92,87,8,8,0,0,0,29.08,99.37a156,156,0,0,1,197.84,0A8,8,0,0,0,237.08,87ZM205,122.77a124,124,0,0,0-153.94,0A8,8,0,0,0,61,135.31a108,108,0,0,1,134.06,0,8,8,0,0,0,11.24-1.3A8,8,0,0,0,205,122.77Zm-32.26,35.76a76.05,76.05,0,0,0-89.42,0,8,8,0,0,0,9.42,12.94,60,60,0,0,1,70.58,0,8,8,0,1,0,9.42-12.94Z"/></symbol>
+<symbol id="i-github-logo" viewBox="0 0 256 256"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+<symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+<symbol id="i-music-notes" viewBox="0 0 256 256"><path d="M212.92,17.69a8,8,0,0,0-6.86-1.45l-128,32A8,8,0,0,0,72,56V166.08A36,36,0,1,0,88,196V110.25l112-28v51.83A36,36,0,1,0,216,164V24A8,8,0,0,0,212.92,17.69ZM52,216a20,20,0,1,1,20-20A20,20,0,0,1,52,216ZM88,93.75V62.25l112-28v31.5ZM180,184a20,20,0,1,1,20-20A20,20,0,0,1,180,184Z"/></symbol>
+<symbol id="i-qr-code" viewBox="0 0 256 256"><path d="M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm0,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48ZM200,40H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-64,72V144a8,8,0,0,1,16,0v32a8,8,0,0,1-16,0Zm80-16a8,8,0,0,1-8,8H184v40a8,8,0,0,1-8,8H144a8,8,0,0,1,0-16h24V144a8,8,0,0,1,16,0v8h24A8,8,0,0,1,216,160Zm0,32v16a8,8,0,0,1-16,0V192a8,8,0,0,1,16,0Z"/></symbol>
+<symbol id="i-desktop-tower" viewBox="0 0 256 256"><path d="M216,72a8,8,0,0,1-8,8H176a8,8,0,0,1,0-16h32A8,8,0,0,1,216,72Zm-8,24H176a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16Zm40-48V208a16,16,0,0,1-16,16H152a16,16,0,0,1-16-16V192H96v16h16a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16H80V192H32A24,24,0,0,1,8,168V96A24,24,0,0,1,32,72H136V48a16,16,0,0,1,16-16h80A16,16,0,0,1,248,48ZM136,176V88H32a8,8,0,0,0-8,8v72a8,8,0,0,0,8,8Zm96,32V48H152V208h80Zm-40-40a12,12,0,1,0,12,12A12,12,0,0,0,192,168Z"/></symbol>
+<symbol id="i-cloud-slash" viewBox="0 0 256 256"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L81.32,88.55l-.06.12A65,65,0,0,0,72,88a64,64,0,0,0,0,128h88a87.34,87.34,0,0,0,31.8-5.93l10.28,11.31a8,8,0,1,0,11.84-10.76ZM160,200H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.3.12A88.4,88.4,0,0,0,72,128a8,8,0,0,0,16,0,72.25,72.25,0,0,1,5.06-26.54l87,95.7A71.66,71.66,0,0,1,160,200Zm88-72a87.89,87.89,0,0,1-22.35,58.61A8,8,0,0,1,213.71,176,72,72,0,0,0,117.37,70a8,8,0,0,1-9.48-12.89A88,88,0,0,1,248,128Z"/></symbol>
+<symbol id="i-code" viewBox="0 0 256 256"><path d="M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z"/></symbol>
+<symbol id="i-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
+<symbol id="i-warning-circle" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"/></symbol>
+<symbol id="i-bell" viewBox="0 0 256 256"><path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol>
+<symbol id="i-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="Palwyn home">
+      <svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" class="mark-tile"/><g fill="none" stroke-width="16" stroke-linejoin="round"><path class="mark-link" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/><path class="mark-phone" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/></g></svg>
+      Palwyn
+    </a>
+    <nav aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <button class="theme-btn" id="theme" type="button" aria-label="Switch to dark mode"><svg class="i i-moon"><use href="#i-moon"/></svg><svg class="i i-sun"><use href="#i-sun"/></svg></button>
+    <a class="btn btn-sm" href="#get">Get Palwyn</a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-copy">
+    <h1><span>Your phone, on your PC.</span><br><span class="dim">Nothing in between.</span></h1>
+    <p class="lede">Calls, texts, notifications, photos and files between Android and Windows. Straight over your Wi-Fi. Free and open source.</p>
+    <div class="ctas">
+      <a class="btn" href="#get">Get Palwyn <svg class="i"><use href="#i-arrow-right"/></svg></a>
+      <a class="btn btn-ghost" href="https://github.com/maeldotdev/palwyn"><svg class="i"><use href="#i-github-logo"/></svg> View source</a>
+    </div>
+  </div>
+
+  <div class="scene" id="scene" aria-label="Palwyn on a Windows PC showing a text message from the phone">
+    <div class="win hero-win">
+      <div class="win-bar"><span class="win-title"><svg class="mark sm" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" class="mark-tile"/><g fill="none" stroke-width="16" stroke-linejoin="round"><path class="mark-link" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/><path class="mark-phone" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/></g></svg>Palwyn</span><span class="win-ctl"><i></i><i></i><i></i></span></div>
+      <div class="win-body">
+        <aside class="rail">
+          <b class="on">Home</b><b>Messages</b><b>Notifications</b><b>Calls</b><b>Contacts</b><b>Photos</b>
+        </aside>
+        <div class="pane dash">
+          <div class="dash-head">
+            <strong>Pixel 8</strong>
+            <span class="conn">Connected on Wi-Fi</span>
+          </div>
+          <div class="dash-grid">
+            <div class="tile"><small>Battery</small><em>76%</em><span class="bar"><i style="width:76%"></i></span></div>
+            <div class="tile"><small>Signal</small><em>LTE</em><span>Globe</span></div>
+            <div class="tile"><small>Storage</small><em>84 GB free</em><span>of 128 GB</span></div>
+          </div>
+          <div class="dash-list">
+            <small>Recent</small>
+            <p><svg class="i"><use href="#i-phone-call"/></svg>Missed call from Lola Nena<time>9:12</time></p>
+            <p><svg class="i"><use href="#i-images"/></svg>4 photos saved to Pictures<time>8:47</time></p>
+            <p><svg class="i"><use href="#i-clipboard-text"/></svg>Link sent to your phone<time>8:30</time></p>
+          </div>
+        </div>
+      </div>
+      <div class="toast" role="img" aria-label="Windows notification: Mika Santos, running 10 minutes late">
+        <div class="toast-app"><svg class="mark xs" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" class="mark-tile"/><g fill="none" stroke-width="16" stroke-linejoin="round"><path class="mark-link" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/><path class="mark-phone" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/></g></svg>Palwyn<span>now</span></div>
+        <strong>Mika Santos</strong>
+        <p>Running 10 mins late. Order the adobo for me?</p>
+        <div class="toast-reply"><span class="typed" data-type="Sure, see you soon"></span><svg class="i"><use href="#i-paper-plane-tilt"/></svg></div>
+      </div>
+    </div>
+
+    <div class="phone hero-phone" aria-hidden="true">
+      <div class="phone-screen lock">
+        <div class="sb"><span>9:41</span><span class="sb-r"><svg class="i"><use href="#i-wifi-high"/></svg>76%</span></div>
+        <div class="lock-time">9:41</div>
+        <div class="lock-date">Tuesday, 29 September</div>
+        <div class="notif">
+          <small>Messages<span>now</span></small>
+          <strong>Mika Santos</strong>
+          <p>Running 10 mins late. Order the adobo for me?</p>
+        </div>
+        <div class="notif dim">
+          <small>Palwyn<span>9:02</span></small>
+          <p>Connected to DESKTOP-MIKA</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STORY: problems solved -->
+<section class="story" id="features" aria-labelledby="story-h">
+  <h2 id="story-h" class="story-h">Four small annoyances.<br>Gone.</h2>
+  <div class="story-grid">
+    <div class="steps">
+      <article class="step" data-step="1">
+        <p class="pain"><span>Your phone rings in your bag. Again.</span></p>
+        <h3>See who's calling. Answer from your desk.</h3>
+        <p>The caller's name pops up on your PC within a blink. Answer, decline or hang up without digging for the phone.</p>
+      </article>
+      <article class="step" data-step="2">
+        <p class="pain"><span>Thumb-typing a long reply while your keyboard sits right there.</span></p>
+        <h3>Text from a real keyboard.</h3>
+        <p>Your SMS conversations on the PC, with names, pictures and group chats. Reply from the window or straight from the notification.</p>
+      </article>
+      <article class="step" data-step="3">
+        <p class="pain"><span>Emailing photos to yourself. Hunting for the cable.</span></p>
+        <h3>Your gallery, one click from Pictures.</h3>
+        <p>Browse recent photos and albums from the PC and save them in full quality. Or take a new one and it lands on the PC.</p>
+      </article>
+      <article class="step" data-step="4">
+        <p class="pain"><span>Copying a booking code from phone to laptop, one digit at a time.</span></p>
+        <h3>Copy on one, paste on the other.</h3>
+        <p>Text and images you copy on the PC appear on the phone. From the phone it's one tap: "Send to PC".</p>
+      </article>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage" id="stage" data-step="1" aria-hidden="true">
+        <div class="win stage-win">
+          <div class="win-bar"><span class="win-title">Palwyn</span><span class="win-ctl"><i></i><i></i><i></i></span></div>
+          <div class="win-body">
+            <aside class="rail">
+              <b data-for="1">Calls</b><b data-for="2">Messages</b><b data-for="3">Photos</b><b data-for="4">Home</b>
+            </aside>
+            <div class="screens">
+              <!-- 1 calls -->
+              <div class="scr" data-s="1">
+                <div class="call-card">
+                  <div class="avatar">PR</div>
+                  <div><strong>Paolo Reyes</strong><small>Mobile, incoming call</small></div>
+                  <div class="call-btns"><span class="ans"><svg class="i"><use href="#i-phone-call"/></svg>Answer</span><span class="dec"><svg class="i"><use href="#i-x"/></svg>Decline</span></div>
+                </div>
+                <div class="log">
+                  <p><span>Lola Nena</span><small>Missed</small><time>9:12</time></p>
+                  <p><span>Kuya Jun</span><small>Outgoing, 4 min</small><time>Yesterday</time></p>
+                  <p><span>+63 917 000 1234</span><small>Declined</small><time>Mon</time></p>
+                </div>
+              </div>
+              <!-- 2 messages -->
+              <div class="scr" data-s="2">
+                <div class="thread">
+                  <div class="thread-head">Mika Santos</div>
+                  <p class="in">Running 10 mins late. Order the adobo for me?</p>
+                  <p class="out">Sure, see you soon</p>
+                  <p class="in">You're the best. Can you bring my charger too?</p>
+                  <div class="compose"><span class="typed" data-type="Already in my bag. Drive safe!"></span><svg class="i"><use href="#i-paper-plane-tilt"/></svg></div>
+                </div>
+              </div>
+              <!-- 3 photos -->
+              <div class="scr" data-s="3">
+                <div class="ph-head"><strong>Recent</strong><span class="save"><svg class="i"><use href="#i-download-simple"/></svg>Save to Pictures</span></div>
+                <div class="ph-grid">
+                  <img src="img/photo-1.jpg" alt="" width="400" height="400" loading="lazy">
+                  <img src="img/photo-2.jpg" alt="" width="400" height="400" loading="lazy">
+                  <img src="img/photo-3.jpg" alt="" width="400" height="400" loading="lazy">
+                  <img src="img/photo-4.jpg" alt="" width="400" height="400" loading="lazy">
+                  <img src="img/photo-5.jpg" alt="" width="400" height="400" loading="lazy">
+                  <img src="img/photo-6.jpg" alt="" width="400" height="400" loading="lazy">
+                </div>
+              </div>
+              <!-- 4 clipboard -->
+              <div class="scr" data-s="4">
+                <div class="clip">
+                  <svg class="i big"><use href="#i-clipboard-text"/></svg>
+                  <small>Copied from Pixel 8</small>
+                  <strong class="mono">7QK2MX</strong>
+                  <span class="paste">Ctrl + V anywhere</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone stage-phone">
+          <div class="phone-screen">
+            <div class="sb"><span>9:41</span><span class="sb-r"><svg class="i"><use href="#i-wifi-high"/></svg>76%</span></div>
+            <div class="pscr" data-s="1">
+              <div class="ring"><div class="avatar lg">PR</div><strong>Paolo Reyes</strong><small>Answered from DESKTOP-MIKA</small></div>
+            </div>
+            <div class="pscr" data-s="2">
+              <div class="p-thread"><b>Mika Santos</b><p class="in">Running 10 mins late. Order the adobo for me?</p><p class="out">Sure, see you soon</p><small>Sent from your PC</small></div>
+            </div>
+            <div class="pscr" data-s="3">
+              <div class="p-grid"><img src="img/photo-1.jpg" alt="" loading="lazy"><img src="img/photo-2.jpg" alt="" loading="lazy"><img src="img/photo-3.jpg" alt="" loading="lazy"><img src="img/photo-4.jpg" alt="" loading="lazy"><img src="img/photo-5.jpg" alt="" loading="lazy"><img src="img/photo-6.jpg" alt="" loading="lazy"></div>
+            </div>
+            <div class="pscr" data-s="4">
+              <div class="p-share"><p>Your booking ref is <mark class="mono">7QK2MX</mark>. See you on the 14th.</p><div class="sheet"><small>Share</small><span class="hi"><svg class="i"><use href="#i-desktop-tower"/></svg>Send to PC</span><span><svg class="i"><use href="#i-chat-circle-text"/></svg>Messages</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY: the peak -->
+<section class="bridge" id="privacy" aria-labelledby="privacy-h">
+  <svg class="bigmark" viewBox="0 0 256 256" aria-hidden="true"><g fill="none" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path class="draw draw-phone" pathLength="1" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/><path class="draw draw-link" pathLength="1" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/></g></svg>
+  <h2 id="privacy-h">One link. Yours.</h2>
+  <p class="bridge-p">Your phone and PC talk to each other directly. No Palwyn server, no account, no copy of your messages sitting in someone's cloud.</p>
+  <ul class="facts">
+    <li><svg class="i"><use href="#i-lock-key"/></svg><strong>Encrypted both ways</strong><span>TLS 1.3 with pinned certificates. Only the devices you paired can connect.</span></li>
+    <li><svg class="i"><use href="#i-cloud-slash"/></svg><strong>Stays on your network</strong><span>Nothing leaves your Wi-Fi unless you point it at your own VPN.</span></li>
+    <li><svg class="i"><use href="#i-code"/></svg><strong>Open source</strong><span>GPL-3.0. Read every line that touches your phone.</span></li>
+  </ul>
+</section>
+
+<!-- MORE: bento -->
+<section class="more" aria-labelledby="more-h">
+  <h2 id="more-h">Then it gets fun.</h2>
+  <div class="bento">
+    <article class="cell c-pad" data-reveal>
+      <div class="pad-vis" aria-hidden="true">
+        <div class="phone mini">
+          <div class="phone-screen">
+            <div class="tabs"><b>Touchpad</b><span>Slides</span><span>PC</span></div>
+            <div class="pad"><span class="finger"></span></div>
+            <div class="keys"><span>Esc</span><span>Tab</span><span>←</span><span>→</span><span>Enter</span></div>
+          </div>
+        </div>
+        <svg class="cursor" viewBox="0 0 256 256"><use href="#i-cursor-click"/></svg>
+      </div>
+      <h3>Your phone is the touchpad.</h3>
+      <p>Move the pointer, click, scroll and type on the PC from the couch. Flip to Slides and the volume keys change slides.</p>
+    </article>
+
+    <article class="cell c-screen" data-reveal>
+      <div class="mirror" aria-hidden="true">
+        <div class="win tiny"><div class="win-bar"><span class="win-title">Phone screen</span><span class="win-ctl"><i></i><i></i><i></i></span></div><div class="mirror-body"><div class="phone-flat"><img src="img/photo-5.jpg" alt="" loading="lazy"></div></div></div>
+      </div>
+      <h3>Your phone's screen, in a window.</h3>
+      <p>See it live on the PC. Allow control and your mouse taps, swipes and types on the phone.</p>
+    </article>
+
+    <article class="cell c-drop" data-reveal>
+      <div class="drop" aria-hidden="true"><span class="file">Trip-budget.xlsx</span><span class="file">Boarding-pass.pdf</span><span class="file">Vacation</span></div>
+      <h3>Drop files either way.</h3>
+      <p>Drag onto the PC window or share from any phone app. Whole folders too.</p>
+    </article>
+
+    <article class="cell c-ring" data-reveal>
+      <svg class="i ring-i" aria-hidden="true"><use href="#i-bell-ringing"/></svg>
+      <h3>Lost it in the couch?</h3>
+      <p>Ring it at full volume, even on silent.</p>
+    </article>
+
+    <article class="cell c-notif" data-reveal>
+      <svg class="i" aria-hidden="true"><use href="#i-bell"/></svg>
+      <h3>Every notification, on the big screen.</h3>
+      <p>Read, reply and dismiss phone notifications on Windows. Dismiss once, it's gone on both.</p>
+    </article>
+
+    <article class="cell c-media" data-reveal>
+      <div class="np" aria-hidden="true">
+        <img src="img/photo-3.jpg" alt="" loading="lazy">
+        <div><strong>Now playing on your PC</strong><small>Controlled from your phone</small><span class="np-ctl"><svg class="i"><use href="#i-music-notes"/></svg><i></i><i></i><i></i></span></div>
+      </div>
+      <h3>Music, volume and lock, both ways.</h3>
+      <p>Control the phone's music from the tray. Control the PC's music, volume and lock screen from the phone.</p>
+    </article>
+  </div>
+
+  <div class="marquee" aria-label="More features">
+    <ul>
+      <li>Call history</li><li>Contacts, add and edit</li><li>Search calls and messages</li><li>Group texts and MMS</li><li>Photo albums</li><li>Take a photo from the PC</li><li>PC notifications on your phone</li><li>Run PC commands from your phone</li><li>Pause music when the phone rings</li><li>Keep the PC awake while connected</li><li>Several phones paired</li><li>Connect over Tailscale or ZeroTier</li><li>Dark and light themes</li>
+    </ul>
+    <ul aria-hidden="true">
+      <li>Call history</li><li>Contacts, add and edit</li><li>Search calls and messages</li><li>Group texts and MMS</li><li>Photo albums</li><li>Take a photo from the PC</li><li>PC notifications on your phone</li><li>Run PC commands from your phone</li><li>Pause music when the phone rings</li><li>Keep the PC awake while connected</li><li>Several phones paired</li><li>Connect over Tailscale or ZeroTier</li><li>Dark and light themes</li>
+    </ul>
+  </div>
+</section>
+
+<!-- HONEST LIMITS -->
+<section class="limits" aria-labelledby="limits-h">
+  <h2 id="limits-h">What it won't do. Honestly.</h2>
+  <div class="limit-cols">
+    <div>
+      <h3>Android's rules</h3>
+      <p><strong>Phone to PC clipboard takes a tap.</strong> Android stops apps reading the clipboard in the background. PC to phone is automatic.</p>
+      <p><strong>RCS chats stay on the phone.</strong> Apps can't read them. You can still reply to their notifications from the PC.</p>
+      <p><strong>No iPhone.</strong> iOS blocks texts, calls and other apps' notifications.</p>
+    </div>
+    <div>
+      <h3>Windows' rules</h3>
+      <p><strong>Call audio stays on your phone.</strong> Windows keeps Bluetooth call audio for its own apps, so you answer on the PC and talk on the phone.</p>
+      <p><strong>One phone connected at a time.</strong> Pair as many as you like and switch in Settings.</p>
+      <p><strong>Pair on the same network.</strong> After that, a VPN address works from anywhere.</p>
+    </div>
+  </div>
+</section>
+
+<!-- GET STARTED -->
+<section class="start" aria-labelledby="start-h">
+  <h2 id="start-h">Set up in about a minute.</h2>
+  <ol class="flow">
+    <li><svg class="i"><use href="#i-desktop-tower"/></svg><h3>Install on the PC</h3><p>It lives in the tray, out of your way.</p></li>
+    <li><svg class="i"><use href="#i-qr-code"/></svg><h3>Scan with the phone</h3><p>Open the app, scan the QR code on the PC.</p></li>
+    <li><svg class="i"><use href="#i-check"/></svg><h3>Done</h3><p>It reconnects on its own whenever both are on.</p></li>
+  </ol>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq" aria-labelledby="faq-h">
+  <h2 id="faq-h">Questions</h2>
+  <div class="faq-list">
+    <details><summary>Is Palwyn free?</summary><p>Yes. It's free and open source under the GPL-3.0 licence. No paid plans, no ads, no account.</p></details>
+    <details><summary>Does it send my data to the cloud?</summary><p>No. The phone and PC talk directly over your own network with encrypted, pinned TLS 1.3. There is no Palwyn server.</p></details>
+    <details><summary>Which phones and PCs does it work with?</summary><p>Android 10 or newer, and Windows 10 (version 2004) or newer. iPhone isn't supported.</p></details>
+    <details><summary>Can I talk on calls through my PC?</summary><p>No. You see who's calling and answer, decline or end calls from the PC, but the audio stays on the phone. Windows keeps Bluetooth call audio for its own apps.</p></details>
+    <details><summary>Is it an alternative to Phone Link?</summary><p>Yes, for Android phones. It covers calls, messages, notifications, photos and files, and adds a touchpad remote, your phone's screen on the PC and file transfer both ways, all without an account.</p></details>
+    <details><summary>Does it work away from home?</summary><p>Pairing needs both on the same network. After that, give the PC your phone's VPN address (Tailscale, ZeroTier) and it connects there.</p></details>
+  </div>
+</section>
+
+<!-- GET -->
+<section class="get" id="get" aria-labelledby="get-h">
+  <svg class="mark get-mark" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" class="mark-tile"/><g fill="none" stroke-width="16" stroke-linejoin="round"><path class="mark-link" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/><path class="mark-phone" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/></g></svg>
+  <h2 id="get-h">Get Palwyn</h2>
+  <p>The first public release is being tested now. It will be free on GitHub, for Windows and Android.</p>
+  <a class="btn" href="https://github.com/maeldotdev/palwyn"><svg class="i"><use href="#i-github-logo"/></svg> View source</a>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span>© 2026 Mael. GPL-3.0.</span>
+  <span>This site has no trackers or cookies.</span>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

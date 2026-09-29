@@ -1,0 +1,20 @@
+Palwyn
+Copyright (C) 2026 Mael
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See LICENSE.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+The name "Palwyn" and its logo are not covered by this licence; see TRADEMARKS.md.
+
+Third-party components:
+
+- JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors, SIL Open Font License 1.1
+  (full text next to the font: apps/windows/src/Palwyn.App/Assets/Fonts/JetBrainsMono-OFL.txt and
+  apps/android/app/src/main/res/raw/jetbrains_mono_ofl.txt).
+- AndroidX and Jetpack Compose (Android), Apache License 2.0.
+- Windows App SDK and QRCoder (Windows), MIT License.
+- Website only: Geist fonts (SIL Open Font License 1.1) and Phosphor icons (MIT), licences in site/.

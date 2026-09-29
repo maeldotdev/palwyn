@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <style>
+    .t { fill: #FAFAFA } .p { stroke: #18181B } .l { stroke: #12A67C }
+    @media (prefers-color-scheme: dark) { .t { fill: #18181B } .p { stroke: #FAFAFA } .l { stroke: #2ED3A1 } }
+  </style>
+  <rect class="t" width="256" height="256" rx="56"/>
+  <g fill="none" stroke-width="16" stroke-linejoin="round">
+    <path class="l" d="M155 92H184A20 20 0 0 1 204 112V144A20 20 0 0 1 184 164H124A20 20 0 0 1 104 144V112A20 20 0 0 1 124 92H125"/>
+    <path class="p" d="M140 179V180A24 24 0 0 1 116 204H76A24 24 0 0 1 52 180V76A24 24 0 0 1 76 52H116A24 24 0 0 1 140 76V149"/>
+  </g>
+</svg>

@@ -1,0 +1,195 @@
+<Page
+    x:Class="Palwyn.App.NotificationsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Palwyn.App">
+
+    <Grid
+        MaxWidth="880"
+        Padding="40,24,40,0"
+        HorizontalAlignment="Stretch"
+        RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Notifications" />
+            <Button
+                x:Name="ClearAllButton"
+                HorizontalAlignment="Right"
+                Click="ClearAll_Click"
+                Content="Clear all"
+                Visibility="Collapsed" />
+            <Button
+                x:Name="ClearHistoryButton"
+                HorizontalAlignment="Right"
+                Click="ClearHistory_Click"
+                Content="Clear history"
+                Visibility="Collapsed" />
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <SelectorBar x:Name="Views" SelectionChanged="Views_SelectionChanged">
+                <SelectorBarItem
+                    x:Name="LiveItem"
+                    IsSelected="True"
+                    Text="On your phone" />
+                <SelectorBarItem x:Name="HistoryItem" Text="History" />
+            </SelectorBar>
+            <AutoSuggestBox
+                x:Name="Search"
+                Grid.Column="1"
+                Width="280"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Search notifications"
+                PlaceholderText="Search notifications"
+                QueryIcon="Find"
+                TextChanged="Search_TextChanged" />
+        </Grid>
+
+        <InfoBar
+            x:Name="Problem"
+            Grid.Row="2"
+            IsOpen="False"
+            Severity="Warning" />
+
+        <ListView
+            x:Name="List"
+            Grid.Row="3"
+            Margin="-16,0,-16,0"
+            Padding="0,0,0,32"
+            SelectionMode="None">
+            <ListView.ItemContainerStyle>
+                <Style BasedOn="{StaticResource DefaultListViewItemStyle}" TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:NotificationRow">
+                    <Grid
+                        Margin="0,4"
+                        Padding="16,12,8,12"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        ColumnSpacing="12"
+                        CornerRadius="8">
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Click="Mute_Click" Text="{x:Bind MuteLabel}">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE7ED;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid
+                            Width="32"
+                            Height="32"
+                            VerticalAlignment="Top">
+                            <Border
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                CornerRadius="8"
+                                Visibility="{x:Bind NoIcon}">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="{x:Bind Letter}" />
+                            </Border>
+                            <Image Source="{x:Bind Icon}" />
+                        </Grid>
+
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="{x:Bind Source}" />
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{x:Bind Title}"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind HasTitle}" />
+                            <TextBlock
+                                IsTextSelectionEnabled="True"
+                                MaxLines="6"
+                                FontFamily="{StaticResource ReadingFontFamily}"
+                                Style="{StaticResource BodyTextBlockStyle}"
+                                Text="{x:Bind Text}"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind HasText}" />
+                            <ItemsControl
+                                Margin="0,4,0,0"
+                                ItemsSource="{x:Bind Buttons}"
+                                Visibility="{x:Bind HasButtons}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="local:ActionRow">
+                                        <Button Click="Action_Click" Content="{x:Bind Title}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid
+                                Margin="0,4,0,0"
+                                ColumnSpacing="8"
+                                Visibility="{x:Bind HasReply}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    AutomationProperties.Name="{x:Bind ReplyLabel}"
+                                    KeyDown="Reply_KeyDown"
+                                    MaxLength="5000"
+                                    PlaceholderText="{x:Bind ReplyLabel}" />
+                                <Button
+                                    Grid.Column="1"
+                                    AutomationProperties.Name="Send"
+                                    Click="Reply_Click"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    ToolTipService.ToolTip="Send (Enter)">
+                                    <FontIcon FontSize="16" Glyph="&#xE724;" />
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <Button
+                            Grid.Column="2"
+                            VerticalAlignment="Top"
+                            AutomationProperties.Name="Dismiss on phone"
+                            Click="Dismiss_Click"
+                            Style="{StaticResource IconButtonStyle}"
+                            ToolTipService.ToolTip="Dismiss on phone"
+                            Visibility="{x:Bind CanDismiss}">
+                            <FontIcon FontSize="12" Glyph="&#xE711;" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <local:StateView
+            x:Name="State"
+            Grid.Row="3"
+            Visibility="Collapsed" />
+    </Grid>
+</Page>
