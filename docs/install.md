@@ -12,9 +12,7 @@ Requirements: Windows 10 (version 2004) or Windows 11, 64-bit; Android 10 or lat
 4. The installer asks once to trust Palwyn's signing certificate (Windows asks for administrator permission). Accept, and it installs Palwyn and the Windows App SDK runtime it needs.
 5. Open **Palwyn** from the Start menu. It lives in the notification area (system tray).
 
-Why the certificate step: Windows only installs signed apps. Until Palwyn's signing through the SignPath Foundation is approved, releases are signed with Palwyn's own certificate, which your PC has to trust once. See [code signing](code-signing.md).
-
-> **Note for the first SignPath-signed release:** changing the signer changes the app's identity on Windows, so that release will install as a new app. You'll uninstall the old one and pair your phone again, once.
+Why the certificate step: Windows only installs signed apps. Palwyn is signed with its own certificate instead of one bought from a certificate authority, which your PC has to trust once. See [code signing](code-signing.md).
 
 ### Uninstall
 

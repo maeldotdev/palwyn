@@ -4,11 +4,7 @@ Palwyn's release files are built from this repository by the [Release workflow](
 
 ## Windows
 
-Palwyn has applied to the [SignPath Foundation](https://signpath.org) for free code signing. Once approved, Windows releases will say here:
-
-> Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-Until then, Windows releases are signed with Palwyn's own self-signed certificate (subject `CN=Mael`), which the installer asks you to trust once. See [install.md](install.md).
+Windows releases are signed with Palwyn's own self-signed certificate (subject `CN=Mael`), which the installer asks you to trust once. See [install.md](install.md).
 
 ## Android
 

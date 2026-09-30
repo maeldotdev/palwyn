@@ -3,7 +3,7 @@
 #
 # - Android: palwyn-release.jks. Every Android update must be signed with this same key: if it's lost,
 #   users can't update and must uninstall and reinstall. Keep the folder backed up somewhere safe.
-# - Windows: a self-signed code-signing certificate (CN=Mael), used until SignPath signing is approved.
+# - Windows: a self-signed code-signing certificate (CN=Mael).
 #
 # Needs: the GitHub CLI signed in (gh auth status) and Java's keytool (Android Studio's JBR is found).
 param([Parameter(Mandatory)] [string] $OutDir, [string] $Repo = 'maeldotdev/palwyn')
