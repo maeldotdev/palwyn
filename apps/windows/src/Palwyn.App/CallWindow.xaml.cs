@@ -150,6 +150,9 @@ public sealed partial class CallWindow : Window
         bool ringing = c.State == CallState.Ringing && c.Incoming;
         bool active = c.State == CallState.Active;
         bool control = App.Current.Link.Capabilities.Contains("calls.control");
+#if DEBUG
+        control |= c.Id == "demo"; // --call=… demo card (DevArgs): show it as a phone with Calls allowed would
+#endif
         DeclineButton.Visibility = AnswerButton.Visibility = ringing ? Visibility.Visible : Visibility.Collapsed;
         EndButton.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         Actions.Visibility = ringing || active ? Visibility.Visible : Visibility.Collapsed;
