@@ -12,7 +12,7 @@ Until then, Windows releases are signed with Palwyn's own self-signed certificat
 
 ## Android
 
-Android releases are signed with Palwyn's release key. Its certificate fingerprint is listed in each release's notes, so you can check an APK with `apksigner verify --print-certs`.
+Android releases are signed with Palwyn's release key (`CN=Mael`, certificate SHA-256 `f367beb4b61272c5664d3edf858724f07f0ba4179646e886e56df7e87e732db2`), also listed in each release's notes, so you can check an APK with `apksigner verify --print-certs`.
 
 ## Team and roles
 

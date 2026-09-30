@@ -21,9 +21,8 @@ android {
             versionNameSuffix = "-dev"
         }
         release {
-            // ponytail: no R8 shrinking, so reflection-based code can't break in release builds the
-            // debug build never exercised; the APK is bigger. Turn it on once release builds get device tests.
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             // Release signing key, given by the release workflow (tools/make-release-keys.ps1 creates it).
             System.getenv("PALWYN_KEYSTORE")?.let { path ->
                 signingConfig = signingConfigs.create("release") {
