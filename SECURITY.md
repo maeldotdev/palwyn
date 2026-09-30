@@ -20,4 +20,4 @@ The threat model and its known limits are in [docs/security.md](docs/security.md
 
 ## Supported versions
 
-Palwyn hasn't had a first release yet. Fixes go into the latest code on the default branch.
+Palwyn is in pre-release. Only the latest release gets security fixes, and they go into the latest code on the default branch first.
