@@ -13,7 +13,13 @@ Calls, messages, notifications, photos, files, clipboard and more, sent straight
 ![Android 10+](https://img.shields.io/badge/Android-10%2B-3DDC84)
 ![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange)
 
-[Website](https://palwyn.vercel.app) · [Features](#features) · [Privacy](#privacy-and-security) · [Build from source](#build-from-source) · [Support](#support-the-project)
+[Website](https://palwyn.vercel.app) · [Download](https://github.com/maeldotdev/palwyn/releases) · [Features](#features) · [Privacy](#privacy-and-security) · [Support](#support-the-project)
+
+<br>
+
+<img src="docs/screenshots/windows.png" alt="Palwyn on Windows: the app's sidebar and an incoming call with Answer and Decline" width="49%"> <img src="docs/screenshots/android.png" alt="Palwyn on Android: the home screen with Control your PC, Clipboard, Files, Slides and Lock PC" width="49%">
+
+<sub>Screenshots use demo data.</sub>
 
 </div>
 
