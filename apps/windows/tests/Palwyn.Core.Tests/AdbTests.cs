@@ -31,6 +31,18 @@ public class AdbTests
     }
 
     [Fact]
+    public void QuotesPathsForTheShell() =>
+        Assert.Equal("'/sdcard/IMG 2026'\\''01.jpg'", AdbOutput.ShellQuote("/sdcard/IMG 2026'01.jpg"));
+
+    [Fact]
+    public void MapsPhonePathsToSafeLocalPaths()
+    {
+        Assert.Equal(Path.Combine(@"C:\R", "DCIM", "Camera", "a_b.jpg"), AdbOutput.LocalPath("/sdcard/DCIM/Camera/a:b.jpg", @"C:\R"));
+        Assert.Equal(Path.Combine(@"C:\R", "Download", "x.txt"), AdbOutput.LocalPath("/sdcard/Download/../../x.txt", @"C:\R"));
+        Assert.Equal(Path.Combine(@"C:\R", "Documents", "_CON.txt"), AdbOutput.LocalPath("/sdcard/Documents/CON.txt", @"C:\R"));
+    }
+
+    [Fact]
     public void SkipsSameSizeAndTimeWithinTwoSeconds()
     {
         var r = new RemoteFile("/sdcard/a.jpg", 10, 1790000000);

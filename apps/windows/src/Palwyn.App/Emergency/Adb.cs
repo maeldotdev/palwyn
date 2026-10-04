@@ -30,6 +30,9 @@ static class Adb
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // adb writes UTF-8; a windowed app would otherwise decode it with the ANSI code page ("ñ" → "Ã±")
+            StandardOutputEncoding = new System.Text.UTF8Encoding(false),
+            StandardErrorEncoding = new System.Text.UTF8Encoding(false),
         };
         foreach (var a in args) info.ArgumentList.Add(a);
         return Process.Start(info)!;

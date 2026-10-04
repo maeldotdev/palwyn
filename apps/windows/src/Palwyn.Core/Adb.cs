@@ -38,6 +38,20 @@ public static class AdbOutput
         return files;
     }
 
+    /// <summary>A path as one argument for the phone's shell: single-quoted, with ' written as '\''.</summary>
+    public static string ShellQuote(string path) => "'" + path.Replace("'", "'\\''") + "'";
+
+    /// <summary>Where a rescued /sdcard file goes under <paramref name="root"/>: the same folders, each name made safe
+    /// for Windows ("a:b" → "a_b", "CON" → "_CON"), and "." / ".." dropped so nothing lands outside root.</summary>
+    public static string LocalPath(string remotePath, string root)
+    {
+        var parts = remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .SkipWhile(p => p is "sdcard" or "storage" or "emulated" or "0" or "self" or "primary")
+            .Where(p => p is not "." and not "..")
+            .Select(p => PhonePhoto.SafeFileName(p, "application/octet-stream"));
+        return Path.Combine([root, .. parts]);
+    }
+
     /// <summary>Copy unless a local file of the same size, modified within 2 s of the phone's copy, is there.</summary>
     public static bool ShouldCopy(RemoteFile remote, long? localSize, DateTimeOffset? localMtime) =>
         localSize != remote.Size || localMtime is not { } t || Math.Abs(t.ToUnixTimeSeconds() - remote.MtimeSeconds) > 2;

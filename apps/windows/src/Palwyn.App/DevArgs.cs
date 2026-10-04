@@ -33,6 +33,11 @@ static class DevArgs
             if (state != CallState.Ringing) app.OnCall(new PhoneCall("demo", state, true, "+63 917 123 4567", "Mika Santos", start));
             return true;
         }
+        if (args.Contains("--rescue-test"))
+        {
+            _ = RescueTestAsync();
+            return true;
+        }
         if (args.Contains("--emergency"))
         {
             _ = EmergencyTestAsync();
@@ -104,6 +109,24 @@ static class DevArgs
             ScreenWindow.OpenEmergency(device); // the await above resumed on the UI thread
         }
         catch (Exception e) { Log.Info($"Emergency test failed: {e.GetType().Name}: {e.Message}"); }
+    }
+
+    /// <summary>--rescue-test: Rescue limited to Download/palwyn-rescue-test (pushed by the tester) into
+    /// %TEMP%\palwyn-rescue-test, twice, so the second run shows the skips.</summary>
+    static async Task RescueTestAsync()
+    {
+        try
+        {
+            var (_, output) = await Emergency.Adb.RunAsync(default, "devices", "-l");
+            var device = AdbOutput.ParseDevices(output).First(d => d.IsReady);
+            var target = Path.Combine(Path.GetTempPath(), "palwyn-rescue-test");
+            for (int run = 1; run <= 2; run++)
+            {
+                var r = await Emergency.Rescue.RunAsync(device.Serial, target, new Progress<(int, int)>(), default, ["Download/palwyn-rescue-test"]);
+                Log.Info($"Rescue test run {run}: copied {r.Copied}, skipped {r.Skipped}, failed {r.Failed}");
+            }
+        }
+        catch (Exception e) { Log.Info($"Rescue test failed: {e.GetType().Name}: {e.Message}"); }
     }
 }
 #endif
