@@ -142,6 +142,15 @@ static class Toasts
     static bool IsWebLink(string text) =>
         Uri.TryCreate(text.Trim(), UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp);
 
+    /// <summary>The phone stopped answering but is on the cable and allows this PC (LinkManager).</summary>
+    public static void EmergencyHint(AdbDevice device) =>
+        AppNotificationManager.Default.Show(new AppNotificationBuilder()
+            .AddArgument("action", "emergency")
+            .AddText("Phone not responding? Open the emergency screen.")
+            .AddText($"{device.Model?.Replace('_', ' ') ?? "Your phone"} is on the USB cable. You can see and control it from here, even if its screen is broken.")
+            .AddButton(new AppNotificationButton("Emergency screen").AddArgument("action", "emergency"))
+            .BuildNotification());
+
     public static void TextFromPhone(string phone, string text)
     {
         var id = Guid.NewGuid().ToString("N");
@@ -237,6 +246,13 @@ static class Toasts
         if (action == "notif-open")
         {
             App.Current.ShowMain("notifications");
+            return;
+        }
+        if (action == "emergency")
+        {
+            // the phone may have changed since the hint: use the cable's allowed one now
+            if (App.Current.Link.UsbDevices.FirstOrDefault(d => d.IsReady) is { } device) ScreenWindow.OpenEmergency(device);
+            else Error(Emergency.EmergencyException.NoPhone);
             return;
         }
         if (action == "reply" && e.Arguments.TryGetValue("address", out var address)

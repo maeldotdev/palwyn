@@ -80,8 +80,36 @@ public sealed class LinkManager : IDisposable
         if (Paired is { } p) StartEngine(p);
         else Publish(PhoneStatus.NotPaired);
         _usb.Changed += _ => TryUsb();
+        _usb.DevicesChanged += () => _ui.TryEnqueue(() => UsbDevicesChanged?.Invoke());
         _usb.Start();
     }
+
+    long _unreachableSince;
+    bool _hinted;
+
+    /// <summary>Once per episode: the paired phone hasn't answered for 20 s but an allowed phone is on the cable (Palwyn
+    /// on it frozen, or the phone restarted and locked). The emergency screen still works there.</summary>
+    void EmergencyHint(EngineState state)
+    {
+        if (state == EngineState.Connected)
+        {
+            (_unreachableSince, _hinted) = (0, false);
+            return;
+        }
+        if (_unreachableSince == 0) _unreachableSince = Environment.TickCount64;
+        if (_hinted || state != EngineState.Waiting || Environment.TickCount64 - _unreachableSince < 20_000) return;
+        if (_usb.Devices.FirstOrDefault(d => d.IsReady) is not { } device) return;
+        _hinted = true;
+        Log.Info("Emergency hint shown");
+        _ui.TryEnqueue(() => Toasts.EmergencyHint(device));
+    }
+
+    /// <summary>Phones on a USB cable, allowed or not: the emergency screen and Rescue files need an allowed one.</summary>
+    public IReadOnlyList<AdbDevice> UsbDevices => _usb.Devices;
+    /// <summary>UsbDevices changed. Raised on the UI thread.</summary>
+    public event Action? UsbDevicesChanged;
+    /// <summary>Looks at the cable again now (Settings opening, the user plugging in).</summary>
+    public void CheckUsb() => _usb.Check();
 
     /// <summary>Connected, or connecting, over the USB cable.</summary>
     public bool OverUsb => _engine is { } e && UsbLink.Is(e.Host, e.Port);
@@ -598,6 +626,7 @@ public sealed class LinkManager : IDisposable
             Dashboard();
         }
         _wasConnected = state == EngineState.Connected;
+        EmergencyHint(state);
         if (state == EngineState.Waiting && UsbLink.Is(engine.Host, engine.Port)) _usb.Check(); // unplugged? then back to the network
 
         switch (state)

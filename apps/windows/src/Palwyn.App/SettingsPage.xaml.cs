@@ -29,8 +29,11 @@ public sealed partial class SettingsPage : Page
         RenderMuted();
         RenderPhone();
         RenderFolders();
+        RenderEmergency();
+        App.Current.Link.CheckUsb();
         AppSettings.NotificationSettingsChanged += RenderMuted;
         App.Current.StatusChanged += RenderPhone;
+        App.Current.Link.UsbDevicesChanged += RenderEmergency;
         // The tray popup can change these too.
         AppSettings.ThemeChanged += RenderAppearance;
         AppSettings.TransparencyChanged += RenderAppearance;
@@ -38,10 +41,22 @@ public sealed partial class SettingsPage : Page
         {
             AppSettings.NotificationSettingsChanged -= RenderMuted;
             App.Current.StatusChanged -= RenderPhone;
+            App.Current.Link.UsbDevicesChanged -= RenderEmergency;
             AppSettings.ThemeChanged -= RenderAppearance;
             AppSettings.TransparencyChanged -= RenderAppearance;
         };
         _loading = false;
+    }
+
+    /// <summary>Whether the emergency screen and Rescue files would work now, from the phones on the cable.</summary>
+    void RenderEmergency()
+    {
+        var devices = App.Current.Link.UsbDevices;
+        EmergencyText.Text = devices.Any(d => d.IsReady)
+            ? "Ready: this PC is allowed. If your phone's screen breaks, plug it in and open Emergency screen or Rescue files from the tray."
+            : devices.Count > 0
+                ? Emergency.EmergencyException.NotAllowed
+                : "Not ready. Turn on USB debugging on your phone, plug it in once and tap \"Always allow from this computer\". Then, if its screen ever breaks, you can still see, control and copy from it here.";
     }
 
     void RenderAppearance()

@@ -28,6 +28,10 @@ public sealed class UsbLink : IDisposable
 
     /// <summary>True once the phone's port is forwarded over USB, false when the cable is gone. Not on the UI thread.</summary>
     public event Action<bool>? Changed;
+
+    /// <summary>Phones on a cable at the last check, allowed or not (the emergency screen and Rescue files use them).</summary>
+    public IReadOnlyList<AdbDevice> Devices { get; private set; } = [];
+    public event Action? DevicesChanged;
     public bool Forwarded { get; private set; }
     /// <summary>The phone's link port to forward to (the phone falls back to another if 47800 is taken).</summary>
     public int PhonePort { get; set; } = 47800;
@@ -72,6 +76,11 @@ public sealed class UsbLink : IDisposable
         {
             if (!_serverStarted) _serverStarted = Adb("start-server", read: false) is not null; // see Adb
             var lines = AdbOutput.ParseDevices(Adb("devices -l") ?? "").Where(d => d.IsUsb).ToList();
+            if (!lines.SequenceEqual(Devices))
+            {
+                Devices = lines;
+                DevicesChanged?.Invoke();
+            }
             var phone = lines.FirstOrDefault(d => d.IsReady);
             // ponytail: the first phone on USB only; the link's pinning skips it if it isn't the paired one.
             forwarded = phone is not null && Adb($"-s {phone.Serial} forward tcp:{LocalPort} tcp:{PhonePort}") is not null;

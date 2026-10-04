@@ -17,7 +17,9 @@ namespace Palwyn.App;
 /// <param name="Run">Returns a short result for the user, or null to say nothing.</param>
 /// <param name="Offline">Also offered while the phone is away (e.g. Quick Drop queues until it's back).</param>
 /// <param name="Hint">Tooltip saying what the button does, when the title is short.</param>
-public sealed record QuickAction(string Id, Func<string> Title, string Glyph, string? Capability, Func<Task<string?>> Run, bool Offline = false, string? Hint = null);
+/// <param name="When">Shown only while this is true (e.g. a phone on the USB cable); null = always.</param>
+public sealed record QuickAction(string Id, Func<string> Title, string Glyph, string? Capability, Func<Task<string?>> Run, bool Offline = false,
+    string? Hint = null, Func<bool>? When = null);
 
 public static class QuickActions
 {
@@ -42,14 +44,35 @@ public static class QuickActions
             await Launcher.LaunchFolderPathAsync(AppSettings.FilesFolder);
             return null;
         }, Offline: true),
+        // Through adb on the USB cable, with no prompt on the phone: they work even when Palwyn on the phone doesn't.
+        new("emergency", () => "Emergency screen", "", null, () => OnCable(ScreenWindow.OpenEmergency), Offline: true,
+            Hint: "See and control your phone over the USB cable, without touching it", When: CableReady),
+        new("rescue", () => "Rescue files", "", null, () => OnCable(RescueWindow.Open), Offline: true,
+            Hint: "Copy your phone's photos, videos and files to this PC over the USB cable", When: CableReady),
     ];
+
+    static bool CableReady() => App.Current.Link.UsbDevices.Any(d => d.IsReady);
+
+    /// <summary>Runs <paramref name="open"/> for the allowed phone on the cable.</summary>
+    // ponytail: with several allowed phones on cables, the first one; a picker when that ever comes up.
+    static Task<string?> OnCable(Action<AdbDevice> open)
+    {
+        if (App.Current.Link.UsbDevices.FirstOrDefault(d => d.IsReady) is not { } device) return Task.FromResult<string?>(Emergency.EmergencyException.NoPhone);
+        open(device);
+        return Task.FromResult<string?>(null);
+    }
+
+    /// <summary>Surfaces re-render (e.g. a phone was plugged in).</summary>
+    public static void Refresh() => Changed?.Invoke();
+
 
     public static IEnumerable<QuickAction> Available()
     {
         var link = App.Current.Link;
         if (link.Paired is null) return [];
         // While the phone is away its capabilities are unknown; offline actions are offered anyway.
-        return All.Where(a => (link.IsConnected || a.Offline) && (a.Capability is null || link.Capabilities.Contains(a.Capability) || !link.IsConnected));
+        return All.Where(a => (link.IsConnected || a.Offline) && (a.Capability is null || link.Capabilities.Contains(a.Capability) || !link.IsConnected)
+                              && (a.When is null || a.When()));
     }
 
     /// <summary>Titles changed (e.g. ringing started or stopped).</summary>

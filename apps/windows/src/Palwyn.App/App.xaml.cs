@@ -47,6 +47,7 @@ public partial class App : Application
         _tray.Invoked += anchor => _flyout.Toggle(anchor);
         _tray.ClipboardChanged += ClipboardSync.OnChanged;
         _tray.Update(Status);
+        Link.UsbDevicesChanged += QuickActions.Refresh; // the emergency actions show while a phone is on the cable
         Link.Start();
         AppSettings.RemoteChanged += PcRemote.Update;
         Toasts.Init(_ui!);
