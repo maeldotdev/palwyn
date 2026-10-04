@@ -8,6 +8,7 @@ $proj = Join-Path $root 'src\Palwyn.App\Palwyn.App.csproj'
 Get-Process Palwyn.App -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
 if (-not $NoBuild) {
+    & (Join-Path $PSScriptRoot 'fetch-deps.ps1')
     dotnet build $proj -p:Platform=x64 -v:q -nologo | Out-Host
     if ($LASTEXITCODE) { throw 'build failed' }
 }

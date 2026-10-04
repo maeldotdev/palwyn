@@ -20,7 +20,7 @@ public sealed class UsbLink : IDisposable
     const string AnyUsbDevice = "System.Devices.InterfaceClassGuid:=\"{A5DCBF10-6530-11D2-901F-00C04FB951ED}\" AND " +
                                 "System.Devices.InterfaceEnabled:=System.StructuredQueryType.Boolean#True";
 
-    readonly string? _adb = FindAdb();
+    readonly string? _adb = AdbPath;
     readonly Lock _gate = new();
     DeviceWatcher? _watcher;
     int _scheduled;
@@ -113,14 +113,22 @@ public sealed class UsbLink : IDisposable
         }
     }
 
-    /// <summary>adb from the Android SDK (where Android Studio puts it) or PATH.</summary>
-    static string? FindAdb() =>
-        new[] { Environment.GetEnvironmentVariable("ANDROID_HOME"), Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
+    /// <summary>adb bundled with Palwyn (tools/fetch-deps.ps1), else the Android SDK's (where Android Studio puts it)
+    /// or PATH's. Shared with the emergency screen and Rescue files.</summary>
+    public static string? AdbPath { get; } = FindAdb();
+
+    static string? FindAdb()
+    {
+        var bundled = Path.Combine(AppContext.BaseDirectory, "Assets", "adb", "adb.exe");
+        var path = File.Exists(bundled) ? bundled : new[] { Environment.GetEnvironmentVariable("ANDROID_HOME"), Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk") }
             .Where(d => !string.IsNullOrEmpty(d)).Select(d => Path.Combine(d!, "platform-tools"))
             .Concat((Environment.GetEnvironmentVariable("PATH") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
             .Select(d => Path.Combine(d, "adb.exe"))
             .FirstOrDefault(File.Exists);
+        Log.Info($"USB: adb from {(path == bundled ? "bundled" : path is null ? "nowhere" : "sdk or path")}");
+        return path;
+    }
 
     public void Dispose()
     {
