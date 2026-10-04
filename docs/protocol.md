@@ -280,6 +280,14 @@ Files never travel on the session. The PC opens a second TLS connection (same pi
 - Only the PC that asked may open the stream or control the phone. `screen.control` is advertised only while the screen is shared, with the phone's "Let my PC control this phone" switch on (off by default) and its accessibility service on. Taps and swipes go in through `dispatchGesture`, keys through global actions, text by setting the focused field (no real key presses, so no shortcuts).
 - Details and limits (secure windows stay black, no sound): [research-screen-mirroring.md](research-screen-mirroring.md).
 
+### Emergency channel (not part of the link)
+
+The emergency screen doesn't use the paired TLS link: the PC starts a helper on the phone through adb (`CLASSPATH=/data/local/tmp/palwyn-emergency.jar app_process / dev.palwyn.emergency.Main <socketName> <tokenHex>`) and reaches it with `adb forward tcp:0 localabstract:<socketName>`.
+- The client first sends the 32 raw token bytes (the command line carries them as 64 lowercase hex characters). Anything else closes the connection and ends the helper.
+- Phone to PC: frames as on the link's screen stream (big-endian u32 length, then a JPEG of at most 1 MiB).
+- PC to phone: one JSON object per line, `{"type": "SCREEN_TOUCH" | "SCREEN_KEY" | "SCREEN_TEXT", "payload": {...}}`, with the payloads above. Input is injected as the shell user, so it also reaches the lock screen.
+- One client per helper run; it exits when the client disconnects. Security: [security.md §8b](security.md).
+
 ### Search
 `CALL_LOG_GET` and `SMS_THREADS_GET` take an optional `query ≤ 100`; the phone filters before paging, so `limit` and `before` work as usual.
 - Calls: the contact name or the number matches.

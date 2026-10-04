@@ -164,6 +164,12 @@ With the screen off on realme the alert rides the 3 s keep-alive (Phase 0: ≈ 3
 - Media: `media/Media.kt` follows the phone's media sessions (needs notification access) and sends `MEDIA_STATE`; `PhoneControls` shows now playing with previous / play-pause / next and volume in the flyout and on Home.
 - Not built, by platform limit: actions that open a screen on the phone (gallery, downloads, a conversation, an app). Android 10+ blocks starting activities from the background; the only exemptions are a visible window, "display over other apps", or a CompanionDeviceManager association. Revisit in V2 ("advanced device controls") if the companion-device route proves workable.
 
+### Emergency screen and Rescue files (2026-10-04)
+
+- Phone: `apps/android/emergency`, a 20 KB helper APK the PC runs through adb as the shell user (not installed). `Capture` mirrors the main display into an `ImageReader` (DisplayManager on Android 14+, SurfaceControl before, as in scrcpy) and writes JPEG frames; `Input` injects touches, keys and text through `InputManager`. The hidden-API wrappers in `scrcpy/` are ported from scrcpy v4.1 (`third_party/scrcpy`).
+- PC: `Emergency/EmergencySession` pushes, starts and connects to the helper and cleans up after it; `ScreenWindow` takes an `IScreenSource` (`LinkScreenSource` with Android's consent, `EmergencyScreenSource` without), so both look and work the same. `Emergency/Rescue` lists shared folders with `find`/`stat` and copies them with `adb pull -a`.
+- adb is bundled (`tools/fetch-deps.ps1`), which also lets the USB-cable link work without the Android SDK. `UsbLink` reports the phones on the cable; the tray and Home show "Emergency screen" and "Rescue files" while an allowed one is plugged in, Settings shows whether this PC is allowed, and `LinkManager` shows a one-time hint when the paired phone stops answering but is on the cable.
+
 ### Visual system (Phase 13)
 
 - One product, two native languages. Windows: Fluent (Mica window, Acrylic tray popup, Segoe UI Variable, the user's Windows accent, `OverlayCornerRadius` for cards and tiles, `ControlCornerRadius` for controls). Android: Material 3 (dynamic color on Android 12+, a cobalt fallback before that, `extraLarge` hero, `large` cards). Shared: the phone glyph, the words ("Calls on your PC", "Photos and videos on your PC"), and the rule that every screen explains its empty, offline and permission states.

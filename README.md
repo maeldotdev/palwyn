@@ -41,6 +41,7 @@ Most phone-to-PC apps route your data through someone else's servers or need an 
 | **Clipboard** | Text and images copied on the PC arrive on the phone; send the phone's clipboard to the PC with one tap. Password-manager copies are skipped. |
 | **Contacts** | Browse, search, add and edit your phone's contacts from the PC. |
 | **Phone screen** | View and control your phone's screen in a window on the PC. |
+| **Emergency screen** | Phone screen broken? Over a USB cable, see and control it and copy its photos, videos and files, with no prompt on the phone ([prepare it now](docs/install.md#prepare-for-emergencies)). |
 | **Remote** | Use the phone as a touchpad and keyboard, a presentation clicker, or a remote for the PC's music, volume and lock screen. Run your own PC commands from the phone. |
 | **Everyday extras** | Ring your phone, battery and signal at a glance, media controls, pause PC music during calls, keep the PC awake while connected. |
 | **Connection** | Automatic over Wi-Fi, switches to a USB cable when plugged in, or connect by address over a VPN such as Tailscale. |

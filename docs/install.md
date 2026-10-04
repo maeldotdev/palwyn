@@ -40,6 +40,19 @@ Long-press Palwyn > **App info > Uninstall**. Files the PC sent you stay in **Do
 
 After pairing, they reconnect by themselves whenever both are on the same network. You can also connect over a USB cable (with USB debugging on) or by address over a VPN; see Settings on the PC.
 
+## Prepare for emergencies
+
+If your phone's screen breaks but the phone still works, Palwyn on your PC can show and control it (**Emergency screen**) and copy its photos, videos and files (**Rescue files**) over a USB cable, without touching the phone. This only works if you prepare it **now**, while the screen works:
+
+1. On the phone, turn on Developer options: Settings > About phone, then tap **Build number** (or Version) 7 times.
+2. In Developer options, turn on **USB debugging**.
+3. Plug the phone into this PC with a USB cable and, on the phone, tick **Always allow from this computer** and tap **Allow**.
+4. In Palwyn on the PC, Settings > **Emergency access** should say **Ready**.
+
+Then, in an emergency, plug in the cable and choose **Emergency screen** or **Rescue files** in the tray or on Home. If the phone restarted, you'll see its lock screen: type your PIN with the PC keyboard.
+
+What it can't do: reach a phone that is switched off or never allowed this PC; show banking apps or protected video (they stay black); copy other apps' private data, such as chat databases. For phones that won't turn on at all, only a backup made beforehand helps.
+
 ## Troubleshooting
 
 | Problem | What to try |

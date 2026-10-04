@@ -17,4 +17,8 @@ Third-party components:
   apps/android/app/src/main/res/raw/jetbrains_mono_ofl.txt).
 - AndroidX and Jetpack Compose (Android), Apache License 2.0.
 - Windows App SDK and QRCoder (Windows), MIT License.
+- scrcpy (parts of its server, modified, in the emergency-screen helper), Copyright (C) 2018 Genymobile, Copyright (C)
+  2018-2026 Romain Vimont, Apache License 2.0; see third_party/scrcpy.
+- adb (Android SDK Platform-Tools r37.0.1, bundled with the Windows app), The Android Open Source Project, Apache License
+  2.0; its notices are in the app's Assets/adb/NOTICE.txt.
 - Website only: Geist fonts (SIL Open Font License 1.1) and Phosphor icons (MIT), licences in site/.

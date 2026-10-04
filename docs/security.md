@@ -99,6 +99,17 @@ The commitment stops a MITM from picking nonces after seeing the other side's, s
 - **Discovery privacy**: the phone advertises only while pairing (with its name) or while paired but not connected (id only, no name). Accepted residual risk (Phase 15): the `id` attribute is a stable identifier visible on the network while advertising. A rotating tag would not remove it, because the phone's TLS certificate (equally stable) is shown to anyone on the network who starts a handshake, before client authentication. Unlinkable identities would need a different handshake design; not planned for v1.
 - **Removal**: removing on one side sends `UNPAIR` when connected; otherwise the other side learns on its next connection attempt (TLS rejection).
 
+## 8b. Emergency screen and Rescue files
+
+For when the phone's screen is broken but the phone still runs: the PC shows and controls it, and copies its shared storage, with no prompt on the phone. Spec: [superpowers/specs/2026-10-04-emergency-screen-design.md](superpowers/specs/2026-10-04-emergency-screen-design.md).
+
+- **Trust boundary: adb authorization.** Everything goes through adb on a USB cable, and the phone accepts adb only from PCs the user allowed ("Allow USB debugging from this computer", Android's RSA key prompt). Palwyn opens no new access: any program on an allowed PC can already capture the screen, inject input and read shared storage through adb. Palwyn makes it a button. A phone that never allowed this PC can't be reached, and Palwyn says so.
+- **The helper** (`apps/android/emergency`, partly ported from scrcpy v4.1, Apache-2.0) is pushed to `/data/local/tmp/` and run by adb as the shell user. That's why it needs no MediaProjection consent and works while Palwyn's phone app is frozen. It isn't installed, keeps nothing, and is deleted from the phone when the session ends; Palwyn also stops it when it quits.
+- **Its channel**: an abstract socket with a random name per session, reached through `adb forward tcp:0` (127.0.0.1 only on the PC). The helper serves exactly one client, which must first send the 32-byte random token Palwyn passed on the helper's command line. A wrong or missing token (5 s) ends the helper. This keeps other PC programs (the forwarded port) and other phone apps (abstract sockets are world-connectable) out.
+- **Nothing recorded**: no screen images are saved. Logs say "Emergency screen opened/closed" with the model, and Rescue's counts, never file names or screen content.
+- **Android's protections still apply**: secure windows (FLAG_SECURE: banking apps, DRM video) stay black, and other apps' private data (`Android/data`, app databases) can't be rescued. After a restart the lock screen shows; the user types the PIN from the PC keyboard. Palwyn never stores or enters a PIN.
+- **adb** is bundled (Android SDK Platform-Tools r37.0.1, Apache-2.0), downloaded at build time and checked against a pinned SHA-256.
+
 ## 9. Phase 15 audit (2026-09-29)
 
 Checked: network and TLS setup, pairing, local storage, logs, tokens and secrets, permissions and exported components, device removal, message and photo privacy, file names from the other side, frame limits, dependencies.
