@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Palwyn"
 include(":app")
+include(":emergency")
