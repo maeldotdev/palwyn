@@ -101,13 +101,7 @@ static class DevArgs
             var (_, output) = await Emergency.Adb.RunAsync(default, "devices", "-l");
             var device = AdbOutput.ParseDevices(output).FirstOrDefault(d => d.IsReady);
             if (device is null) { Log.Info("Emergency test: no phone"); return; }
-            await using var session = await Emergency.EmergencySession.StartAsync(device, default);
-            int n = 0;
-            await foreach (var frame in session.FramesAsync(default))
-            {
-                Log.Info($"Emergency test: frame {frame.Length} bytes");
-                if (++n == 3) break;
-            }
+            ScreenWindow.OpenEmergency(device); // the await above resumed on the UI thread
         }
         catch (Exception e) { Log.Info($"Emergency test failed: {e.GetType().Name}: {e.Message}"); }
     }

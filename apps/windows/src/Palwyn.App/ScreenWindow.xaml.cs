@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Palwyn.Core;
 using Palwyn.Core.Link;
 using Palwyn.Core.Protocol;
 using Windows.Foundation;
@@ -27,6 +28,7 @@ public sealed partial class ScreenWindow : Window
 {
     static ScreenWindow? _current;
 
+    readonly IScreenSource _src;
     readonly SoftwareBitmapSource _source = new();
     SoftwareBitmap? _shown;
     CancellationTokenSource? _stream;
@@ -37,20 +39,32 @@ public sealed partial class ScreenWindow : Window
     readonly StringBuilder _typed = new();
 
     /// <summary>Opens (or brings back) the window and asks the phone to share its screen.</summary>
-    public static void Open()
+    public static void Open() => OpenWith(() => new LinkScreenSource(), s => s is LinkScreenSource);
+
+    /// <summary>The emergency screen of <paramref name="device"/>: through adb, no prompt on the phone.</summary>
+    public static void OpenEmergency(AdbDevice device) => OpenWith(() => new EmergencyScreenSource(device), s => s is EmergencyScreenSource);
+
+    /// <summary>One phone screen window at a time: opening the other kind replaces it.</summary>
+    static void OpenWith(Func<IScreenSource> create, Func<IScreenSource, bool> isSame)
     {
-        _current ??= new ScreenWindow();
+        if (_current is { } open && !isSame(open._src)) open.Close();
+        _current ??= new ScreenWindow(create());
         _current.Activate();
         Win32.SetForegroundWindow(WindowNative.GetWindowHandle(_current)); // opened from the tray: come to the front
         if (_current._stream is null) _current.Ask();
     }
 
     /// <summary>SCREEN_STATE from the phone, on the UI thread.</summary>
-    public static void OnState(string state) => _current?.State(state);
-
-    ScreenWindow()
+    public static void OnState(string state)
     {
+        if (_current?._src is LinkScreenSource) _current.State(state);
+    }
+
+    ScreenWindow(IScreenSource src)
+    {
+        _src = src;
         InitializeComponent();
+        Title = src.Title;
         Picture.Source = _source;
         GlassBackdrop.Follow(this, () => new MicaBackdrop());
         WindowIcon.Follow(AppWindow, Root);
@@ -60,17 +74,18 @@ public sealed partial class ScreenWindow : Window
         AppWindow.MoveAndResize(new RectInt32(work.X + (work.Width - size.Width) / 2, work.Y + Math.Max(0, (work.Height - size.Height) / 2),
             size.Width, Math.Min(size.Height, work.Height)));
 
-        App.Current.StatusChanged += OnStatus;
-        App.Current.Link.DashboardChanged += RenderControl; // capabilities: control comes and goes with sharing
+        src.Changed += RenderControl;
+        src.Lost += OnLost;
         AppSettings.ThemeChanged += ApplyTheme;
         Closed += (_, _) =>
         {
             _closed = true;
             _stream?.Cancel(); // the phone sees the stream close and stops sharing
-            App.Current.StatusChanged -= OnStatus;
-            App.Current.Link.DashboardChanged -= RenderControl;
+            src.Changed -= RenderControl;
+            src.Lost -= OnLost;
             AppSettings.ThemeChanged -= ApplyTheme;
-            _current = null;
+            _ = src.DisposeAsync().AsTask(); // the emergency helper is stopped and removed from the phone
+            if (ReferenceEquals(_current, this)) _current = null;
         };
         ApplyTheme();
         RenderControl();
@@ -78,14 +93,13 @@ public sealed partial class ScreenWindow : Window
 
     void ApplyTheme() => Root.RequestedTheme = AppSettings.Theme;
 
-    void OnStatus()
+    void OnLost(string message)
     {
-        if (App.Current.Link.IsConnected) return;
         _stream?.Cancel();
-        Show("Your phone disconnected.", retry: true);
+        Show(message, retry: true);
     }
 
-    static bool CanControl => App.Current.Link.Capabilities.Contains("screen.control");
+    bool CanControl => _src.CanControl;
 
     void RenderControl()
     {
@@ -115,12 +129,12 @@ public sealed partial class ScreenWindow : Window
 
     async void Ask()
     {
-        Show("On your phone, tap the Palwyn notification, then Start. To skip this next time, turn on \"Keep screen sharing ready\" in Palwyn on the phone.", busy: true);
-        try { await App.Current.Link.RequestScreenAsync(); }
-        catch (Exception e) when (e is PhoneErrorException or TimeoutException or IOException or InvalidOperationException)
+        Show(_src.Starting, busy: true);
+        try
         {
-            Show(e is PhoneErrorException ? "Update Palwyn on your phone to see its screen here." : "Your phone isn't connected.", retry: true);
+            if (await _src.BeginAsync()) _ = StreamAsync();
         }
+        catch (ScreenSourceException e) { Show(e.Message, retry: true); }
     }
 
     void Retry_Click(object sender, RoutedEventArgs e) => Ask();
@@ -148,11 +162,9 @@ public sealed partial class ScreenWindow : Window
         Show("Connecting…", busy: true);
         try
         {
-            await using var link = await App.Current.Link.OpenScreenAsync(cts.Token);
             bool first = true;
-            while (await link.ReadBlobAsync(cts.Token) is { } jpeg)
+            await foreach (var jpeg in _src.FramesAsync(cts.Token))
             {
-                if (jpeg.Length > 0 && jpeg[0] == (byte)'{') break; // ERROR instead of frames: not shared with this PC
                 await ShowFrameAsync(jpeg);
                 if (!first) continue;
                 first = false;
@@ -167,7 +179,7 @@ public sealed partial class ScreenWindow : Window
         }
         if (!ReferenceEquals(_stream, cts)) return; // replaced by a newer stream
         _stream = null;
-        if (!cts.IsCancellationRequested) Show("Screen sharing ended.", retry: true);
+        if (!cts.IsCancellationRequested) Show(_src.Ended, retry: true);
     }
 
     async Task ShowFrameAsync(byte[] jpeg)
@@ -199,7 +211,7 @@ public sealed partial class ScreenWindow : Window
     }
 
     void Touch((int X, int Y) from, (int X, int Y) to, long ms) =>
-        _ = App.Current.Link.ScreenControlAsync("SCREEN_TOUCH", new JsonObject
+        _ = _src.SendAsync("SCREEN_TOUCH", new JsonObject
         {
             ["x1"] = from.X, ["y1"] = from.Y, ["x2"] = to.X, ["y2"] = to.Y, ["ms"] = (int)Math.Clamp(ms, 1, 10_000),
         });
@@ -207,7 +219,7 @@ public sealed partial class ScreenWindow : Window
     void Key(string key)
     {
         FlushTyping();
-        _ = App.Current.Link.ScreenControlAsync("SCREEN_KEY", new JsonObject { ["key"] = key });
+        _ = _src.SendAsync("SCREEN_KEY", new JsonObject { ["key"] = key });
     }
 
     void Surface_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -284,7 +296,7 @@ public sealed partial class ScreenWindow : Window
         if (_typed.Length == 0) return;
         var text = _typed.ToString();
         _typed.Clear();
-        _ = App.Current.Link.ScreenControlAsync("SCREEN_TEXT", new JsonObject { ["text"] = text });
+        _ = _src.SendAsync("SCREEN_TEXT", new JsonObject { ["text"] = text });
     }
 
     void Back_Click(object sender, RoutedEventArgs e) => Key("back");
