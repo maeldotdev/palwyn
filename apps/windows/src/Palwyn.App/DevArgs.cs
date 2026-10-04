@@ -33,6 +33,11 @@ static class DevArgs
             if (state != CallState.Ringing) app.OnCall(new PhoneCall("demo", state, true, "+63 917 123 4567", "Mika Santos", start));
             return true;
         }
+        if (args.Contains("--emergency"))
+        {
+            _ = EmergencyTestAsync();
+            return true;
+        }
         if (args.FirstOrDefault(a => a.StartsWith("--pair-dev=")) is { } pd)
         {
             _ = PairDevAsync(pd[11..]);
@@ -85,6 +90,26 @@ static class DevArgs
             }
         }
         finally { File.Delete(file); } // it holds the invite's secret
+    }
+
+    /// <summary>--emergency: an emergency session with the first allowed phone (also wireless, for testing), logs the
+    /// first frames' sizes, then closes it. Temporary, until the entry points exist.</summary>
+    static async Task EmergencyTestAsync()
+    {
+        try
+        {
+            var (_, output) = await Emergency.Adb.RunAsync(default, "devices", "-l");
+            var device = AdbOutput.ParseDevices(output).FirstOrDefault(d => d.IsReady);
+            if (device is null) { Log.Info("Emergency test: no phone"); return; }
+            await using var session = await Emergency.EmergencySession.StartAsync(device, default);
+            int n = 0;
+            await foreach (var frame in session.FramesAsync(default))
+            {
+                Log.Info($"Emergency test: frame {frame.Length} bytes");
+                if (++n == 3) break;
+            }
+        }
+        catch (Exception e) { Log.Info($"Emergency test failed: {e.GetType().Name}: {e.Message}"); }
     }
 }
 #endif

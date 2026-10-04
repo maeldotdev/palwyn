@@ -250,6 +250,7 @@ public partial class App : Application
     public void Quit()
     {
         Log.Info("Quit requested");
+        Emergency.EmergencySession.CloseAll();
         Link?.Dispose();
         _tray?.Dispose();
         _main?.Close();
