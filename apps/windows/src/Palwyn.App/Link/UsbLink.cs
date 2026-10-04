@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Palwyn.Core;
 using Windows.Devices.Enumeration;
 
 namespace Palwyn.App.Link;
@@ -70,18 +71,13 @@ public sealed class UsbLink : IDisposable
         lock (_gate)
         {
             if (!_serverStarted) _serverStarted = Adb("start-server", read: false) is not null; // see Adb
-            // "serial  device product:… transport_id:3". Windows' adb shows no usb: path, so wireless ones
-            // (ip:port or name._adb-tls-connect._tcp) and emulators are told apart by their serial.
-            var lines = (Adb("devices") ?? "").Split((char[])['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Skip(1)
-                .Select(l => l.Split((char[])[' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
-                .Where(p => p.Length > 1 && !p[0].Contains(':') && !p[0].Contains("._adb-") && !p[0].StartsWith("emulator-"))
-                .ToList();
-            var phone = lines.FirstOrDefault(p => p[1] == "device");
+            var lines = AdbOutput.ParseDevices(Adb("devices -l") ?? "").Where(d => d.IsUsb).ToList();
+            var phone = lines.FirstOrDefault(d => d.IsReady);
             // ponytail: the first phone on USB only; the link's pinning skips it if it isn't the paired one.
-            forwarded = phone is not null && Adb($"-s {phone[0]} forward tcp:{LocalPort} tcp:{PhonePort}") is not null;
+            forwarded = phone is not null && Adb($"-s {phone.Serial} forward tcp:{LocalPort} tcp:{PhonePort}") is not null;
             // "unauthorized": the phone is asking "Allow USB debugging?" and only the user can answer; look again soon.
             waiting = phone is null && lines.Count > 0;
-            Log.Info($"USB: checked, {lines.Count} on USB ({string.Join(", ", lines.Select(p => p[1]))}), forwarded: {forwarded}");
+            Log.Info($"USB: checked, {lines.Count} on USB ({string.Join(", ", lines.Select(d => d.State))}), forwarded: {forwarded}");
         }
         if (waiting) Schedule(3000);
         if (forwarded == Forwarded) return;
