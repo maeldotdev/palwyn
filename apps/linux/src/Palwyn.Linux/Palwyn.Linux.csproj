@@ -9,7 +9,18 @@
     <Version>0.15.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
     <PackageReference Include="QRCoder" Version="1.8.0" />
     <ProjectReference Include="..\..\..\windows\src\Palwyn.Core\Palwyn.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Same font and icon as the Windows app and the website. -->
+    <AvaloniaResource Include="..\..\..\windows\src\Palwyn.App\Assets\Fonts\JetBrainsMono.ttf" Link="Assets\JetBrainsMono.ttf" />
+    <AvaloniaResource Include="..\..\..\..\site\icon-192.png" Link="Assets\icon.png" />
+    <!-- Licences travel with the app (GPL, third-party notices, the font's OFL). -->
+    <None Include="..\..\..\..\LICENSE;..\..\..\..\NOTICE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\windows\src\Palwyn.App\Assets\Fonts\JetBrainsMono-OFL.txt" Link="JetBrainsMono-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

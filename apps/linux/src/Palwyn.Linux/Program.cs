@@ -1,16 +1,16 @@
-// palwyn-linux: the Linux PC side, headless for now (docs/superpowers/plans/2026-10-05-linux-port.md, Phase 2).
-// Pairs with the phone, keeps it connected and shows its notifications on the desktop.
+// palwyn-linux: the Linux PC app (docs/superpowers/plans/2026-10-05-linux-port.md). With no arguments it opens the
+// desktop app (tray and window); the commands below run it headless, for servers, scripts and debugging.
 using System.Text;
 using Palwyn.Core;
 using Palwyn.Core.Link;
 using Palwyn.Linux;
+using Avalonia;
 using QRCoder;
 
 const int PhonePort = 47800;
-var dataDir = Path.Combine(
-    Environment.GetEnvironmentVariable("XDG_DATA_HOME") is { Length: > 0 } x && Path.IsPathRooted(x)
-        ? x : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share"),
-    "palwyn");
+var dataDir = Paths.Data;
+if (args is [] or ["--hidden"]) return Gui(args);
+
 var identity = IdentityFile.Load(dataDir);
 var pcFingerprint = Fingerprint.Of(identity);
 var phones = new PairedPhones(Path.Combine(dataDir, "paired-phones.json"));
@@ -37,10 +37,26 @@ catch (OperationCanceledException) when (quit.IsCancellationRequested)
     return 130;
 }
 
+static int Gui(string[] args)
+{
+    if (App.HandOffToRunningCopy()) return 0; // the running copy shows its window
+    App.StartHidden = args is ["--hidden"];
+    var run = () => AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace().StartWithClassicDesktopLifetime(args);
+    if (!OperatingSystem.IsWindows()) return run();
+    // Development on Windows: Avalonia wants an STA UI thread, which an async Main doesn't have.
+    int code = 0;
+    var ui = new Thread(() => code = run());
+    ui.SetApartmentState(ApartmentState.STA);
+    ui.Start();
+    ui.Join();
+    return code;
+}
+
 int Usage()
 {
     Console.WriteLine("""
-        Usage: palwyn-linux <command>
+        Usage: palwyn-linux [command]
+          (none)                     open Palwyn (tray and window); --hidden starts it in the tray
           pair                       show a QR code to scan with Palwyn on the phone, then pair
           pair --address <ip[:port]> the same, for a network where the PC can't find the phone by itself
           run                        stay connected and show the phone's notifications on this desktop
@@ -121,9 +137,9 @@ async Task<int> Run()
         return 1;
     }
     // The shared hub (as on Windows): connects, follows the phone's address through discovery, reconnects.
-    var host = new LinuxHost(new DesktopNotifier());
+    var host = new LinuxHost(Settings.Load());
     var blocked = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-    host.Blocked += why => blocked.TrySetResult(why);
+    host.StatusChanged += () => { if (host.Status is { State: ConnectionState.Blocked, Detail: { } why }) blocked.TrySetResult(why); };
     var discovery = new AvahiDiscovery();
     using var link = new LinkManager(host, identity, dataDir, discovery, new NoUsb());
     Console.WriteLine($"Connecting to {phone.Name}. Ctrl+C to stop.");

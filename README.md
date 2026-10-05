@@ -73,13 +73,13 @@ The full threat model, what is stored where, and the results of the security aud
 
 | | |
 |---|---|
-| **PC** | Windows 10 (version 2004) or Windows 11, 64-bit |
+| **PC** | Windows 10 (version 2004) or Windows 11, 64-bit; or Linux, 64-bit (early: pairing, status and notifications only) |
 | **Phone** | Android 10 or later |
 | **Network** | Phone and PC on the same Wi-Fi for pairing; after that, Wi-Fi, USB cable (with USB debugging) or an address you set |
 
 ## Download
 
-Get the Windows and Android apps from the [Releases](https://github.com/maeldotdev/palwyn/releases) page, then follow the [installation guide](docs/install.md). Or build it yourself; see below.
+Get the Windows, Linux and Android apps from the [Releases](https://github.com/maeldotdev/palwyn/releases) page, then follow the [installation guide](docs/install.md). Or build it yourself; see below.
 
 ## Build from source
 
@@ -87,6 +87,7 @@ The repository contains both apps:
 
 ```
 apps/windows   Windows app: C# / .NET 10 / WinUI 3 (Windows App SDK), system tray
+apps/linux     Linux app: C# / .NET 10 / Avalonia, on the same core library
 apps/android   Android app: Kotlin / Jetpack Compose
 shared         Protocol test vectors shared by both apps
 docs           Architecture, protocol, security and test reports

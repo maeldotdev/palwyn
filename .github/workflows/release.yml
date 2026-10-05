@@ -91,9 +91,30 @@ jobs:
           name: android
           path: dist/*
 
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: |
+          dotnet test apps/windows/tests/Palwyn.Core.Tests
+          dotnet test apps/linux/tests/Palwyn.Linux.Tests
+
+      - name: AppImage and tar.gz
+        run: bash tools/linux/build-appimage.sh "$(grep -oP '<Version>\K[^<]+' apps/linux/src/Palwyn.Linux/Palwyn.Linux.csproj)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, android]
+    needs: [windows, android, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

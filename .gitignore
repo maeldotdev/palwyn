@@ -21,3 +21,4 @@ spike-output.txt
 # Bundled build dependencies (apps/windows/tools/fetch-deps.ps1)
 apps/windows/src/Palwyn.App/Assets/adb/
 apps/windows/src/Palwyn.App/Assets/Emergency/
+dist/

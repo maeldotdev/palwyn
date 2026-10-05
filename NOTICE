@@ -13,10 +13,13 @@ The name "Palwyn" and its logo are not covered by this licence; see TRADEMARKS.m
 Third-party components:
 
 - JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors, SIL Open Font License 1.1
-  (full text next to the font: apps/windows/src/Palwyn.App/Assets/Fonts/JetBrainsMono-OFL.txt and
+  (full text next to the font: apps/windows/src/Palwyn.App/Assets/Fonts/JetBrainsMono-OFL.txt, also shipped with the
+  Linux app, and
   apps/android/app/src/main/res/raw/jetbrains_mono_ofl.txt).
 - AndroidX and Jetpack Compose (Android), Apache License 2.0.
 - Windows App SDK (Windows) and QRCoder (Windows and Linux), MIT License.
+- Avalonia and the libraries it brings (SkiaSharp, HarfBuzzSharp, Tmds.DBus.Protocol, MicroCom), Linux app, MIT License.
+- The AppImage runtime (AppImage project), in the Linux AppImage, MIT License.
 - scrcpy (parts of its server, modified, in the emergency-screen helper), Copyright (C) 2018 Genymobile, Copyright (C)
   2018-2026 Romain Vimont, Apache License 2.0; see third_party/scrcpy.
 - adb (Android SDK Platform-Tools r37.0.1, bundled with the Windows app), The Android Open Source Project, Apache License

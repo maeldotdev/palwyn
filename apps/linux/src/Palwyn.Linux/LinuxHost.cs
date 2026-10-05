@@ -5,19 +5,25 @@ using Palwyn.Core.Link;
 namespace Palwyn.Linux;
 
 /// <summary>
-/// The link hub's view of the headless Linux app: a serial work queue instead of a UI thread, the console as its log,
-/// and desktop notifications. Everything the Linux app doesn't do yet is left out of <see cref="PcCapabilities"/>,
-/// so the phone never sends it.
+/// The link hub's view of the Linux app: its UI thread (or, headless, a serial work queue), log, settings and
+/// desktop notifications. Everything the Linux app doesn't do yet is left out of <see cref="PcCapabilities"/>, so
+/// the phone never sends it.
 /// </summary>
-public sealed class LinuxHost(DesktopNotifier notifier) : IPcHost
+/// <param name="post">Runs work on the UI thread; null for the headless app.</param>
+public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : IPcHost
 {
+    readonly DesktopNotifier _notifier = new();
     readonly Lock _gate = new();
     Task _work = Task.CompletedTask;
 
-    /// <summary>Raised when the phone can't be used without the user (it no longer trusts this PC, or versions differ).</summary>
-    public event Action<string>? Blocked;
+    public PhoneStatus Status { get; private set; } = PhoneStatus.NotPaired;
+    /// <summary>On the UI thread.</summary>
+    public event Action? StatusChanged;
+    /// <summary>Newest first, for Home.</summary>
+    public List<(DateTimeOffset At, string Text)> Activity { get; } = [];
+    public event Action? ActivityChanged;
 
-    /// <summary>Runs work one item at a time, in order, like a UI thread would.</summary>
+    /// <summary>Headless: runs work one item at a time, in order, like a UI thread would.</summary>
     void Then(Func<Task> work)
     {
         lock (_gate)
@@ -28,26 +34,51 @@ public sealed class LinuxHost(DesktopNotifier notifier) : IPcHost
             }, TaskScheduler.Default).Unwrap();
     }
 
-    public void Post(Action action) => Then(() => { action(); return Task.CompletedTask; });
-    public void Log(string line) => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {line}");
+    public void Post(Action action)
+    {
+        if (post is not null) post(action);
+        else Then(() => { action(); return Task.CompletedTask; });
+    }
+
+    public void Log(string line) => Linux.Log.Info(line);
     public string Platform => "linux";
     public string AppVersion => typeof(LinuxHost).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
-    public IReadOnlyCollection<string> PcCapabilities { get; } = ["notifications.read"];
-    // ponytail: one phone at a time and no settings file yet, so the first paired phone is always the one in use.
-    public string? ActivePhone { get => null; set { } }
+    public IReadOnlyCollection<string> PcCapabilities { get; } = ["device", "notifications.read"];
+
+    public string? ActivePhone
+    {
+        get => settings.ActivePhone;
+        set
+        {
+            settings.ActivePhone = value;
+            settings.Save();
+        }
+    }
 
     public void SetStatus(PhoneStatus status)
     {
-        if (status is { State: ConnectionState.Blocked, Detail: { } why }) Blocked?.Invoke(why);
+        Status = status;
+        StatusChanged?.Invoke();
     }
 
-    public void OnNotification(PhoneNotification notification) => Then(() => notifier.PostedAsync(notification));
-    public void OnNotificationRemoved(string key) => Then(() => notifier.RemovedAsync(key));
+    public void OnActivity(string glyph, string text)
+    {
+        Activity.Insert(0, (DateTimeOffset.Now, text));
+        if (Activity.Count > 20) Activity.RemoveAt(20);
+        ActivityChanged?.Invoke();
+    }
+
+    // Notification popups run as processes: off the UI thread, in order.
+    public void OnNotification(PhoneNotification notification)
+    {
+        if (settings.Notifications) Then(() => _notifier.PostedAsync(notification));
+    }
+
+    public void OnNotificationRemoved(string key) => Then(() => _notifier.RemovedAsync(key));
 
     // Not built on Linux yet (later phases); the phone doesn't send these without the capability.
     public void OnLinkLost() { }
     public void OnPhoneRemoved() { }
-    public void OnActivity(string glyph, string text) { }
     public void OnSms(SmsMessage sms) { }
     public void OnCall(PhoneCall call) { }
     public void OnClipboard(string text) { }

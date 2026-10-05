@@ -1,0 +1,370 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using Palwyn.Core;
+using Palwyn.Core.Link;
+using QRCoder;
+
+namespace Palwyn.Linux;
+
+/// <summary>The main window: Home, Add a phone and Settings, built in code. Wording follows the Windows app.</summary>
+public sealed class MainWindow : Window
+{
+    static App App => App.Current;
+    static LinkManager Link => App.Link;
+    static readonly IBrush Tile = new SolidColorBrush(Color.Parse("#1A808080")); // reads on light and dark
+
+    readonly ContentControl _content = new() { Padding = new Thickness(24) };
+    readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    string _page = "home";
+
+    public MainWindow()
+    {
+        Title = "Palwyn";
+        Width = 880;
+        Height = 620;
+        MinWidth = 520;
+        MinHeight = 420;
+        FontFamily = App.Mono;
+        Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://palwyn-linux/Assets/icon.png")));
+
+        var nav = new StackPanel { Spacing = 4, Margin = new Thickness(12) };
+        foreach (var (page, label) in new[] { ("home", "Home"), ("add", "Add a phone"), ("settings", "Settings") })
+        {
+            var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch };
+            b.Click += (_, _) => Navigate(page);
+            nav.Children.Add(b);
+        }
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("180,*") };
+        grid.Children.Add(nav);
+        var scroll = new ScrollViewer { Content = _content };
+        Grid.SetColumn(scroll, 1);
+        grid.Children.Add(scroll);
+        Content = grid;
+
+        App.Host.StatusChanged += Refresh;
+        App.Host.ActivityChanged += Refresh;
+        Link.DashboardChanged += Refresh;
+        Link.Discovery.Found += p => Dispatcher.UIThread.Post(() => OnFound(p));
+        Link.Discovery.Lost += key => Dispatcher.UIThread.Post(() => _codePhones.Remove(_codePhones.FirstOrDefault(p => p.Key == key)!));
+        _timer.Tick += (_, _) => Tick();
+    }
+
+    /// <summary>Closing hides the window: the link (and notifications) keep running until Quit.</summary>
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        e.Cancel = !e.IsProgrammatic;
+        if (e.Cancel) Hide();
+        base.OnClosing(e);
+    }
+
+    public void Navigate(string page)
+    {
+        if (_pairing && page != "add") _cts.Cancel(); // leaving Add a phone stops a pairing in progress
+        _page = page;
+        if (page == "add") NewInvite();
+        else _timer.Stop();
+        Refresh();
+    }
+
+    void Refresh() => _content.Content = _page switch
+    {
+        "add" => AddPage(),
+        "settings" => SettingsPage(),
+        _ => HomePage(),
+    };
+
+    static TextBlock Text(string text, double size = 14, FontWeight weight = FontWeight.Normal, double opacity = 1) =>
+        new() { Text = text, FontSize = size, FontWeight = weight, Opacity = opacity, TextWrapping = TextWrapping.Wrap };
+
+    static TextBlock Heading(string text) => Text(text, 24, FontWeight.SemiBold);
+
+    // ---- Home ----
+
+    Control HomePage()
+    {
+        var s = App.Host.Status;
+        var page = new StackPanel { Spacing = 16 };
+        if (s.State == ConnectionState.NotPaired)
+        {
+            page.Children.Add(Heading("Welcome to Palwyn"));
+            page.Children.Add(Text("Pair your Android phone to see its notifications and status on this PC. Install Palwyn on the phone first (version 0.15 or later).", opacity: 0.8));
+            var add = new Button { Content = "Add a phone", Classes = { "accent" } };
+            add.Click += (_, _) => Navigate("add");
+            page.Children.Add(add);
+        }
+        else
+        {
+            page.Children.Add(Heading(s.PhoneName ?? "Your phone"));
+            page.Children.Add(Text(App.StatusText(s), opacity: 0.8));
+            if (s.Detail is { } detail) page.Children.Add(Text(detail));
+            var tiles = new WrapPanel();
+            foreach (var (title, value, detailText) in Tiles(s)) tiles.Children.Add(TileView(title, value, detailText));
+            page.Children.Add(tiles);
+        }
+
+        if (!App.HasTray)
+            page.Children.Add(Text("There's no tray icon on this desktop. On GNOME, the AppIndicator extension adds one. Palwyn keeps running when you close this window; open it again from your apps.", 12, opacity: 0.7));
+        if (App.Discovery.Problem is { } problem)
+            page.Children.Add(Text($"{problem} Without it Palwyn can't find your phone on the network: install it, then restart Palwyn.", 12, opacity: 0.7));
+
+        if (App.Host.Activity.Count > 0)
+        {
+            page.Children.Add(Text("Recent activity", 16, FontWeight.SemiBold));
+            foreach (var (at, text) in App.Host.Activity) page.Children.Add(Text($"{at.ToLocalTime():HH:mm}  {text}", 13, opacity: 0.8));
+        }
+        return page;
+    }
+
+    static List<(string Title, string Value, string Detail)> Tiles(PhoneStatus s)
+    {
+        var tiles = new List<(string, string, string)>();
+        bool connected = s.State == ConnectionState.Connected;
+        tiles.Add(connected
+            ? ("Connection", $"Connected since {Link.ConnectedSince?.ToLocalTime():t}",
+                Link.Paired?.Address is null ? "Live over your Wi-Fi, encrypted" : "Live by address (VPN or other network), encrypted")
+            : ("Connection", "Not connected",
+                Link.LastSeen is { } seen ? $"Last connected {seen.ToLocalTime():t}, {seen.ToLocalTime():d MMM}" : "Waiting for your phone"));
+        if (connected && s.BatteryPercent is int battery)
+            tiles.Add(("Battery", $"{battery}%", s.Charging ? "Charging" : "On battery"));
+        if (connected && Link.DeviceStatus is { } st)
+        {
+            tiles.Add(("Wi-Fi", st.WifiText, st.WifiSignal is int bars ? $"{bars} of 4 bars" : ""));
+            tiles.Add(("Mobile", st.CellText,
+                string.Join(" · ", new[] { st.Carrier, st.CellNetwork, st.CellSignal is int b ? $"{b} of 4 bars" : null }.Where(x => x is not null))));
+            tiles.Add(("Bluetooth", st.Bluetooth switch { true => "On", false => "Off", null => "Not available" }, ""));
+        }
+        if (Link.Device is { } d)
+        {
+            long free = connected && Link.DeviceStatus is { } status ? status.StorageFree : d.StorageFree;
+            if (connected && d.StorageTotal > 0)
+                tiles.Add(("Storage", $"{Size(free)} free", $"{Size(d.StorageTotal - free)} of {Size(d.StorageTotal)} used"));
+            tiles.Add(("Phone", $"{d.Manufacturer} {d.Model}", $"Android {d.AndroidVersion}"));
+        }
+        return tiles;
+    }
+
+    static Control TileView(string title, string value, string detail) => new Border
+    {
+        Background = Tile,
+        CornerRadius = new CornerRadius(12),
+        Padding = new Thickness(16),
+        Margin = new Thickness(0, 0, 12, 12),
+        Width = 240,
+        Child = new StackPanel
+        {
+            Spacing = 4,
+            Children = { Text(title, 12, opacity: 0.7), Text(value, 16, FontWeight.SemiBold), Text(detail, 12, opacity: 0.7) },
+        },
+    };
+
+    static string Size(long bytes) => bytes >= 1L << 30 ? $"{bytes / (double)(1L << 30):0.#} GB" : $"{bytes / (double)(1L << 20):0} MB";
+
+    // ---- Add a phone ----
+
+    readonly ObservableCollection<DiscoveredPhone> _codePhones = [];
+    PairingInvite? _invite;
+    DateTimeOffset _expiresAt;
+    Bitmap? _qr;
+    string _pairStatus = "";
+    string? _code;
+    TaskCompletionSource<bool>? _confirm;
+    bool _pairing;
+    CancellationTokenSource _cts = new();
+
+    void NewInvite()
+    {
+        _invite = Link.NewInvite();
+        _expiresAt = DateTimeOffset.UtcNow + PcPairing.InviteLifetime;
+        using var data = new QRCodeGenerator().CreateQrCode(_invite.ToUri(), QRCodeGenerator.ECCLevel.M);
+        _qr = new Bitmap(new MemoryStream(new PngByteQRCode(data).GetGraphic(8)));
+        _pairStatus = "Waiting for your phone…";
+        _timer.Start();
+        foreach (var p in Link.Discovery.Current) OnFound(p);
+    }
+
+    void Tick()
+    {
+        if (_page != "add") return;
+        if (_expiresAt <= DateTimeOffset.UtcNow && !_pairing) NewInvite(); // one-time secrets expire; show a fresh one
+        Refresh();
+    }
+
+    void OnFound(DiscoveredPhone phone)
+    {
+        _codePhones.Remove(_codePhones.FirstOrDefault(p => p.Key == phone.Key)!);
+        if (phone.PairMode == "code") _codePhones.Add(phone);
+        if (_page == "add" && phone.PairMode == Link.PairingTag && !_pairing && _invite is { } invite)
+            _ = Pair(phone, ct => Link.PairWithQrAsync(phone, invite, _expiresAt, ct));
+        if (_page == "add") Refresh();
+    }
+
+    async Task Pair(DiscoveredPhone phone, Func<CancellationToken, Task<PairedPhone>> pair)
+    {
+        _pairing = true;
+        _cts = new CancellationTokenSource();
+        _pairStatus = $"Pairing with {phone.Name ?? "your phone"}…";
+        Refresh();
+        try
+        {
+            await pair(_cts.Token);
+            _pairing = false;
+            Navigate("home");
+            return;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.Info($"Pairing failed: {ex.GetType().Name}: {ex.Message}");
+            _pairing = false;
+            NewInvite(); // a failed attempt burns the one-time secret
+            _pairStatus = ex is PairingException ? ex.Message : "Pairing didn't finish. Try again.";
+        }
+        catch (OperationCanceledException)
+        {
+            _pairing = false;
+        }
+        _code = null;
+        Refresh();
+    }
+
+    /// <summary>Code pairing: both screens show the same 6 digits; the user confirms here.</summary>
+    async Task<bool> ConfirmCode(string code, CancellationToken ct)
+    {
+        _code = code;
+        _confirm = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(Refresh);
+        using (ct.Register(() => _confirm.TrySetCanceled()))
+            try { return await _confirm.Task; }
+            finally { _code = null; }
+    }
+
+    Control AddPage()
+    {
+        var page = new StackPanel { Spacing = 16 };
+        page.Children.Add(Heading("Add a phone"));
+        page.Children.Add(Text("On your phone, scan this code with the camera and open the Palwyn link. Phone and PC need the same Wi-Fi.", opacity: 0.8));
+        if (_qr is not null)
+            page.Children.Add(new Border
+            {
+                Background = Brushes.White, Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = new Image { Source = _qr, Width = 240, Height = 240 },
+            });
+        var left = _expiresAt - DateTimeOffset.UtcNow;
+        page.Children.Add(Text(_pairStatus, 14, FontWeight.SemiBold));
+        if (!_pairing && left > TimeSpan.Zero)
+            page.Children.Add(Text($"This code works once and changes in {left:m\\:ss}.", 12, opacity: 0.7));
+
+        if (_code is { } code)
+        {
+            page.Children.Add(Text("Check that your phone shows the same code:", 14));
+            page.Children.Add(Text(code, 36, FontWeight.Bold));
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            var yes = new Button { Content = "It matches", Classes = { "accent" } };
+            yes.Click += (_, _) => _confirm?.TrySetResult(true);
+            var no = new Button { Content = "It doesn't" };
+            no.Click += (_, _) => _confirm?.TrySetResult(false);
+            buttons.Children.Add(yes);
+            buttons.Children.Add(no);
+            page.Children.Add(buttons);
+        }
+        else if (!_pairing)
+        {
+            page.Children.Add(Text("Can't scan? Choose \"Pair with a code\" on the phone, then pick it here:", 14));
+            if (_codePhones.Count == 0) page.Children.Add(Text("No phone is waiting for a code.", 12, opacity: 0.7));
+            foreach (var phone in _codePhones)
+            {
+                var b = new Button { Content = phone.Name ?? "Android phone" };
+                b.Click += (_, _) => _ = Pair(phone, ct => Link.PairWithCodeAsync(phone, ConfirmCode, ct));
+                page.Children.Add(b);
+            }
+        }
+        return page;
+    }
+
+    // ---- Settings ----
+
+    string? _removing;
+
+    Control SettingsPage()
+    {
+        var page = new StackPanel { Spacing = 16 };
+        page.Children.Add(Heading("Settings"));
+
+        page.Children.Add(Text("Phones", 16, FontWeight.SemiBold));
+        var active = Link.Paired?.DeviceId;
+        foreach (var phone in Link.Phones.All())
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            row.Children.Add(Text($"{phone.Name}  {Fingerprint.Display(phone.DeviceId)}"));
+            if (phone.DeviceId == active) row.Children.Add(Text("In use", 12, opacity: 0.7));
+            else
+            {
+                var use = new Button { Content = "Use" };
+                use.Click += async (_, _) => { await Link.SwitchToAsync(phone.DeviceId); Refresh(); };
+                row.Children.Add(use);
+            }
+            var remove = new Button { Content = _removing == phone.DeviceId ? "Remove? Click again" : "Remove" };
+            remove.Click += async (_, _) =>
+            {
+                if (_removing != phone.DeviceId)
+                {
+                    _removing = phone.DeviceId;
+                    Refresh();
+                    return;
+                }
+                _removing = null;
+                await Link.RemoveAsync(phone.DeviceId);
+                Refresh();
+            };
+            row.Children.Add(remove);
+            page.Children.Add(row);
+        }
+        var add = new Button { Content = "Add a phone" };
+        add.Click += (_, _) => Navigate("add");
+        page.Children.Add(add);
+
+        page.Children.Add(Text("This PC", 16, FontWeight.SemiBold));
+        var notifications = new ToggleSwitch { Content = "Show phone notifications on this desktop", IsChecked = App.Settings.Notifications };
+        notifications.IsCheckedChanged += (_, _) =>
+        {
+            App.Settings.Notifications = notifications.IsChecked == true;
+            App.Settings.Save();
+        };
+        page.Children.Add(notifications);
+        var autostart = new ToggleSwitch { Content = "Start Palwyn when you sign in", IsChecked = Settings.Autostart };
+        autostart.IsCheckedChanged += (_, _) => Settings.Autostart = autostart.IsChecked == true;
+        page.Children.Add(autostart);
+
+        var theme = new ComboBox { ItemsSource = new[] { "System theme", "Dark", "Light" } };
+        theme.SelectedIndex = App.Settings.Theme switch { "dark" => 1, "light" => 2, _ => 0 };
+        theme.SelectionChanged += (_, _) =>
+        {
+            App.Settings.Theme = theme.SelectedIndex switch { 1 => "dark", 2 => "light", _ => "system" };
+            App.Settings.Save();
+            App.ApplyTheme();
+        };
+        page.Children.Add(theme);
+
+        page.Children.Add(Text("About", 16, FontWeight.SemiBold));
+        page.Children.Add(Text($"Palwyn {App.Host.AppVersion} for Linux. This PC's id: {Fingerprint.Display(Fingerprint.DeviceId(Link.Fingerprint))}", 13, opacity: 0.8));
+        var logs = new Button { Content = "Open log folder" };
+        logs.Click += (_, _) =>
+        {
+            Directory.CreateDirectory(Paths.Logs);
+            try { Process.Start(new ProcessStartInfo("xdg-open", [Paths.Logs]) { UseShellExecute = false }); }
+            catch (System.ComponentModel.Win32Exception) { Log.Info("xdg-open isn't installed"); }
+        };
+        page.Children.Add(logs);
+        var quit = new Button { Content = "Quit Palwyn" };
+        quit.Click += (_, _) => App.Quit();
+        page.Children.Add(quit);
+        return page;
+    }
+}

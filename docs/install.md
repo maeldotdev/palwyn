@@ -19,6 +19,21 @@ Why the certificate step: Windows only installs signed apps. Palwyn is signed wi
 - **Settings > Apps > Installed apps > Palwyn > Uninstall.** This removes the app and everything it stored (paired phones, settings, history). Files you received stay in your Downloads and Pictures folders.
 - Optional: remove the certificate. Press Win+R, type `certlm.msc`, open **Trusted People > Certificates**, and delete the one issued to **Mael**.
 
+## Linux (early)
+
+The Linux app is new: it pairs, keeps the phone connected, shows its status and shows its notifications on your desktop. Calls, messages, photos, files and the remote come later. It needs Palwyn 0.15 or later on the phone.
+
+1. Download `Palwyn-<version>-linux-x86_64.AppImage`.
+2. Make it executable: right-click > Properties > "Allow executing file as program", or `chmod +x Palwyn-*.AppImage`.
+3. Open it. Palwyn uses two common tools: `avahi-browse` (package `avahi-utils`) to find your phone, and `notify-send` (package `libnotify-bin` on Ubuntu, `libnotify` on Fedora) for notifications. Most desktops have both; Palwyn tells you if one is missing.
+4. To start it when you sign in: Settings > **Start Palwyn when you sign in**.
+
+The tray icon works on KDE Plasma, XFCE, Cinnamon and others. Stock GNOME has no tray: install the AppIndicator extension, or use the window, which Palwyn opens at start there. Closing the window keeps Palwyn running; Settings > **Quit Palwyn** stops it.
+
+Prefer no AppImage? `Palwyn-<version>-linux-x64.tar.gz` holds the same app: extract it and run `./palwyn-linux`.
+
+To uninstall, delete the AppImage (and `~/.config/autostart/dev.palwyn.Palwyn.desktop` if you turned on starting at sign-in). Its data is in `~/.local/share/palwyn` (identity and paired phones), `~/.config/palwyn` and `~/.local/state/palwyn` (logs).
+
 ## Android
 
 1. On your phone, download `Palwyn-<version>-android.apk`.
