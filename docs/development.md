@@ -21,6 +21,9 @@ Logs: `%LOCALAPPDATA%\Packages\Palwyn.Dev_*\LocalState\logs\` (Settings → Abou
 
 Icons are placeholders generated from Segoe Fluent Icons by `tools/make-icons.ps1`; replace in the design phase.
 
+### Core on Linux
+`Palwyn.Core` is plain `net10.0`, so its tests run on any OS with the .NET 10 SDK: `dotnet test apps/windows/tests/Palwyn.Core.Tests`. The Windows solution itself does not build on Linux. CI (`.github/workflows/ci.yml`) runs these tests on Ubuntu and Windows on every push.
+
 ### Android app
 - **Android Studio** (bundles the JDK and Gradle). The Android SDK already exists at `%LOCALAPPDATA%\Android\Sdk`.
 - Phone: Developer options → USB debugging on.

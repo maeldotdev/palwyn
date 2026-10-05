@@ -1,0 +1,19 @@
+# Runs the platform-neutral Core tests on Linux and Windows. Release builds stay in release.yml.
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  core-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test apps/windows/tests/Palwyn.Core.Tests --nologo
