@@ -13,14 +13,16 @@ using QRCoder;
 
 namespace Palwyn.Linux;
 
-/// <summary>The main window: Home, Add a phone and Settings, built in code. Wording follows the Windows app.</summary>
-public sealed class MainWindow : Window
+/// <summary>The main window, built in code: Home, Add a phone and Settings here; Calls, Messages and Notifications in
+/// MainWindow.Pages.cs. Wording follows the Windows app.</summary>
+public sealed partial class MainWindow : Window
 {
     static App App => App.Current;
     static LinkManager Link => App.Link;
     static readonly IBrush Tile = new SolidColorBrush(Color.Parse("#1A808080")); // reads on light and dark
 
     readonly ContentControl _content = new() { Padding = new Thickness(24) };
+    readonly ScrollViewer _scroll = new();
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     string _page = "home";
 
@@ -35,7 +37,7 @@ public sealed class MainWindow : Window
         Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://palwyn-linux/Assets/icon.png")));
 
         var nav = new StackPanel { Spacing = 4, Margin = new Thickness(12) };
-        foreach (var (page, label) in new[] { ("home", "Home"), ("add", "Add a phone"), ("settings", "Settings") })
+        foreach (var (page, label) in new[] { ("home", "Home"), ("calls", "Calls"), ("messages", "Messages"), ("notifications", "Notifications"), ("add", "Add a phone"), ("settings", "Settings") })
         {
             var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch };
             b.Click += (_, _) => Navigate(page);
@@ -43,17 +45,23 @@ public sealed class MainWindow : Window
         }
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("180,*") };
         grid.Children.Add(nav);
-        var scroll = new ScrollViewer { Content = _content };
-        Grid.SetColumn(scroll, 1);
-        grid.Children.Add(scroll);
+        _scroll.Content = _content;
+        Grid.SetColumn(_scroll, 1);
+        grid.Children.Add(_scroll);
         Content = grid;
 
-        App.Host.StatusChanged += Refresh;
-        App.Host.ActivityChanged += Refresh;
-        Link.DashboardChanged += Refresh;
+        App.Host.StatusChanged += () => RefreshIf("home");
+        App.Host.ActivityChanged += () => RefreshIf("home");
+        Link.DashboardChanged += () => RefreshIf("home");
+        App.Host.NotificationsChanged += () => RefreshIf("notifications");
+        App.Host.CallChanged += () => RefreshIf("calls");
+        App.Host.SmsReceived += OnSmsReceived;
+        Activated += (_, _) => UpdateViewing();
+        Deactivated += (_, _) => UpdateViewing();
         Link.Discovery.Found += p => Dispatcher.UIThread.Post(() => OnFound(p));
         Link.Discovery.Lost += key => Dispatcher.UIThread.Post(() => _codePhones.Remove(_codePhones.FirstOrDefault(p => p.Key == key)!));
         _timer.Tick += (_, _) => Tick();
+        HookTextBoxes();
     }
 
     /// <summary>Closing hides the window: the link (and notifications) keep running until Quit.</summary>
@@ -64,21 +72,50 @@ public sealed class MainWindow : Window
         base.OnClosing(e);
     }
 
-    public void Navigate(string page)
+    /// <param name="item">A conversation id for "messages", a notification key for "notifications".</param>
+    public void Navigate(string page, string? item = null)
     {
         if (_pairing && page != "add") _cts.Cancel(); // leaving Add a phone stops a pairing in progress
         _page = page;
+        _loadError = null;
         if (page == "add") NewInvite();
         else _timer.Stop();
+        if (page == "calls") _ = LoadCallsAsync();
+        if (page == "messages") _ = item is null ? LoadThreadsAsync() : OpenThreadAsync(item);
+        if (page == "notifications") _replyKey = item;
+        UpdateViewing();
         Refresh();
     }
 
-    void Refresh() => _content.Content = _page switch
+    void RefreshIf(string page)
     {
-        "add" => AddPage(),
-        "settings" => SettingsPage(),
-        _ => HomePage(),
-    };
+        if (_page == page) Refresh();
+    }
+
+    /// <summary>Rebuilds the page. Text boxes are kept across rebuilds (fields), so typing survives, and focus too.</summary>
+    void Refresh()
+    {
+        var focused = FocusManager?.GetFocusedElement() as TextBox;
+        _content.Content = _page switch
+        {
+            "add" => AddPage(),
+            "settings" => SettingsPage(),
+            "calls" => CallsPage(),
+            "messages" => MessagesPage(),
+            "notifications" => NotificationsPage(),
+            _ => HomePage(),
+        };
+        if (focused is not null && TopLevel.GetTopLevel(focused) is not null) focused.Focus();
+    }
+
+    /// <summary>A kept control, taken out of the page it was in so the rebuilt page can hold it.</summary>
+    static T Keep<T>(T control) where T : Control
+    {
+        if (control.Parent is Panel panel) panel.Children.Remove(control);
+        else if (control.Parent is Decorator decorator) decorator.Child = null;
+        else if (control.Parent is ContentControl content) content.Content = null;
+        return control;
+    }
 
     static TextBlock Text(string text, double size = 14, FontWeight weight = FontWeight.Normal, double opacity = 1) =>
         new() { Text = text, FontSize = size, FontWeight = weight, Opacity = opacity, TextWrapping = TextWrapping.Wrap };
@@ -338,6 +375,16 @@ public sealed class MainWindow : Window
             App.Settings.Save();
         };
         page.Children.Add(notifications);
+        var history = new ToggleSwitch { Content = "Keep a history of the phone's notifications on this PC", IsChecked = App.Settings.NotificationHistory };
+        history.IsCheckedChanged += (_, _) =>
+        {
+            App.Settings.NotificationHistory = history.IsChecked == true;
+            App.Settings.Save();
+        };
+        page.Children.Add(history);
+        var clear = new Button { Content = "Clear notification history" };
+        clear.Click += (_, _) => App.Host.ClearHistory();
+        page.Children.Add(clear);
         var autostart = new ToggleSwitch { Content = "Start Palwyn when you sign in", IsChecked = Settings.Autostart };
         autostart.IsCheckedChanged += (_, _) => Settings.Autostart = autostart.IsChecked == true;
         page.Children.Add(autostart);

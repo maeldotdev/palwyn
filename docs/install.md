@@ -21,11 +21,11 @@ Why the certificate step: Windows only installs signed apps. Palwyn is signed wi
 
 ## Linux (early)
 
-The Linux app is new: it pairs, keeps the phone connected, shows its status and shows its notifications on your desktop. Calls, messages, photos, files and the remote come later. It needs Palwyn 0.15 or later on the phone.
+The Linux app is new. It pairs, keeps the phone connected and shows its status; answers and declines calls (the call card and a desktop notification with buttons); reads and sends texts; and shows the phone's notifications, with their actions, replies and a searchable history. Photos, files, the clipboard and the remote come later. It needs Palwyn 0.15 or later on the phone.
 
 1. Download `Palwyn-<version>-linux-x86_64.AppImage`.
 2. Make it executable: right-click > Properties > "Allow executing file as program", or `chmod +x Palwyn-*.AppImage`.
-3. Open it. Palwyn uses two common tools: `avahi-browse` (package `avahi-utils`) to find your phone, and `notify-send` (package `libnotify-bin` on Ubuntu, `libnotify` on Fedora) for notifications. Most desktops have both; Palwyn tells you if one is missing.
+3. Open it. Palwyn uses two common tools: `avahi-browse` (package `avahi-utils`) to find your phone, and `notify-send` (package `libnotify-bin` on Ubuntu, `libnotify` on Fedora) for notifications. Most desktops have both; Palwyn tells you if one is missing. Buttons on notifications (Answer, Decline, Reply…) need libnotify 0.7.10 or later (Ubuntu 22.10, Fedora 36 and newer); with an older one, notifications show without buttons. Replies are typed in the Palwyn window. On GNOME the call card may open behind other windows; the notification is the alert that always shows.
 4. To start it when you sign in: Settings > **Start Palwyn when you sign in**.
 
 The tray icon works on KDE Plasma, XFCE, Cinnamon and others. Stock GNOME has no tray: install the AppIndicator extension, or use the window, which Palwyn opens at start there. Closing the window keeps Palwyn running; Settings > **Quit Palwyn** stops it.

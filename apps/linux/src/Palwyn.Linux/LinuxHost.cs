@@ -5,9 +5,9 @@ using Palwyn.Core.Link;
 namespace Palwyn.Linux;
 
 /// <summary>
-/// The link hub's view of the Linux app: its UI thread (or, headless, a serial work queue), log, settings and
-/// desktop notifications. Everything the Linux app doesn't do yet is left out of <see cref="PcCapabilities"/>, so
-/// the phone never sends it.
+/// The link hub's view of the Linux app: its UI thread (or, headless, a serial work queue), log, settings, the
+/// phone's live state (notifications, call) and desktop notifications. What the Linux app doesn't do yet is left out
+/// of <see cref="PcCapabilities"/>, so the phone never sends it.
 /// </summary>
 /// <param name="post">Runs work on the UI thread; null for the headless app.</param>
 public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : IPcHost
@@ -15,15 +15,31 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     readonly DesktopNotifier _notifier = new();
     readonly Lock _gate = new();
     Task _work = Task.CompletedTask;
+    NotificationHistory? _history;
+    string? _lastCallLogged;
+
+    /// <summary>Set once the hub exists: the buttons on desktop notifications act through it.</summary>
+    public LinkManager? Link { get; set; }
+    /// <summary>The window, when there is one: opens a page ("notifications", "messages", "calls") at an item.</summary>
+    public Action<string, string?>? Open { get; set; }
+    /// <summary>The conversation the user is reading in the focused window: its texts need no desktop notification.</summary>
+    public string? ViewingThread { get; set; }
 
     public PhoneStatus Status { get; private set; } = PhoneStatus.NotPaired;
-    /// <summary>On the UI thread.</summary>
     public event Action? StatusChanged;
     /// <summary>Newest first, for Home.</summary>
     public List<(DateTimeOffset At, string Text)> Activity { get; } = [];
     public event Action? ActivityChanged;
+    /// <summary>What's in the phone's notification shade, by key.</summary>
+    public Dictionary<string, PhoneNotification> Notifications { get; } = [];
+    public event Action? NotificationsChanged;
+    /// <summary>The phone's current or last call; null when the link dropped.</summary>
+    public PhoneCall? Call { get; private set; }
+    public event Action? CallChanged;
+    public event Action<SmsMessage>? SmsReceived;
 
-    /// <summary>Headless: runs work one item at a time, in order, like a UI thread would.</summary>
+    /// <summary>Headless: runs work one item at a time, in order, like a UI thread would. Also keeps the notifier
+    /// (which runs processes) off the UI thread and in order.</summary>
     void Then(Func<Task> work)
     {
         lock (_gate)
@@ -43,7 +59,8 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public void Log(string line) => Linux.Log.Info(line);
     public string Platform => "linux";
     public string AppVersion => typeof(LinuxHost).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
-    public IReadOnlyCollection<string> PcCapabilities { get; } = ["device", "notifications.read"];
+    public IReadOnlyCollection<string> PcCapabilities { get; } =
+        ["device", "calls.state", "calls.control", "calls.log", "sms.read", "sms.send", "notifications.read", "notifications.act"];
 
     public string? ActivePhone
     {
@@ -68,19 +85,125 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
         ActivityChanged?.Invoke();
     }
 
-    // Notification popups run as processes: off the UI thread, in order.
-    public void OnNotification(PhoneNotification notification)
+    // ---- Notifications ----
+
+    /// <summary>The notification history of the phone in use; null with no phone or with the setting off.</summary>
+    public NotificationHistory? History
     {
-        if (settings.Notifications) Then(() => _notifier.PostedAsync(notification));
+        get
+        {
+            if (!settings.NotificationHistory || Link?.Paired is not { } phone) return _history = null;
+            var path = HistoryPath(phone.DeviceId);
+            if (_history?.Path != path)
+            {
+                _history = new NotificationHistory(path);
+                _history.Load();
+            }
+            return _history;
+        }
     }
 
-    public void OnNotificationRemoved(string key) => Then(() => _notifier.RemovedAsync(key));
+    static string HistoryPath(string deviceId) => Path.Combine(Paths.Data, "history", $"notifications-{deviceId}.json");
+
+    public void OnNotification(PhoneNotification n)
+    {
+        Notifications[n.Key] = n;
+        if (History is { } history && history.Add(n))
+        {
+            try { history.Save(); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log($"History not saved: {e.GetType().Name}"); }
+        }
+        NotificationsChanged?.Invoke();
+        if (settings.Notifications) Then(() => _notifier.PostedAsync(n, action => OnNotificationAction(n, action)));
+    }
+
+    void OnNotificationAction(PhoneNotification n, string action)
+    {
+        var chosen = DesktopNotifier.Chosen(n, action);
+        if (chosen is null || chosen.Reply)
+        {
+            Post(() => Open?.Invoke("notifications", n.Key)); // replies are typed in the window
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try { await Link!.NotificationActionAsync(n.Key, chosen.Index); }
+            catch (Exception e) { Log($"Notification action failed: {e.GetType().Name}"); }
+        });
+    }
+
+    public void OnNotificationRemoved(string key)
+    {
+        if (Notifications.Remove(key)) NotificationsChanged?.Invoke();
+        Then(() => _notifier.RemovedAsync(key));
+    }
+
+    public void OnPhoneRemoved()
+    {
+        // History goes with the phone (docs/security.md section 7).
+        var keep = Link?.Phones.All().Select(p => HistoryPath(p.DeviceId)).ToHashSet() ?? [];
+        var dir = Path.Combine(Paths.Data, "history");
+        if (Directory.Exists(dir))
+            foreach (var f in Directory.GetFiles(dir, "notifications-*.json").Where(f => !keep.Contains(f))) File.Delete(f);
+        _history = null;
+    }
+
+    public void ClearHistory()
+    {
+        History?.Clear();
+        NotificationsChanged?.Invoke();
+    }
+
+    public void OnLinkLost()
+    {
+        Notifications.Clear();
+        NotificationsChanged?.Invoke();
+        Call = null;
+        CallChanged?.Invoke();
+        Then(() => _notifier.CloseAsync("call"));
+    }
+
+    // ---- Calls and texts ----
+
+    public void OnCall(PhoneCall call)
+    {
+        Call = call;
+        CallChanged?.Invoke();
+        if (call.State == CallState.Ringing && call.Id != _lastCallLogged)
+        {
+            _lastCallLogged = call.Id;
+            OnActivity("", $"Call from {call.Name ?? call.Number ?? "an unknown number"}");
+            if (call.Incoming)
+                Then(() => _notifier.ShowAsync("call", "Palwyn", $"Call from {call.Title}", "Answer here; you talk on the phone.",
+                    [("answer", "Answer"), ("decline", "Decline")], action => OnCallAction(call, action)));
+        }
+        else if (call.State != CallState.Ringing) Then(() => _notifier.CloseAsync("call"));
+    }
+
+    void OnCallAction(PhoneCall call, string action)
+    {
+        if (action == "default")
+        {
+            Post(() => Open?.Invoke("calls", null));
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try { await Link!.CallCommandAsync(action == "answer" ? "CALL_ANSWER" : "CALL_DECLINE", call.Id); }
+            catch (Exception e) { Log($"Call {action} failed: {e.GetType().Name}"); }
+        });
+    }
+
+    public void OnSms(SmsMessage m)
+    {
+        OnActivity("", m.Outgoing ? $"Texted {m.Name ?? m.Address}" : $"Text from {m.Name ?? m.Address}");
+        SmsReceived?.Invoke(m);
+        if (!m.Outgoing && settings.Notifications && ViewingThread != m.ThreadId)
+            Then(() => _notifier.ShowAsync("sms:" + m.ThreadId, "Messages", m.Name ?? m.Address, m.Preview,
+                [("default", "Open")], _ => Post(() => Open?.Invoke("messages", m.ThreadId))));
+    }
 
     // Not built on Linux yet (later phases); the phone doesn't send these without the capability.
-    public void OnLinkLost() { }
-    public void OnPhoneRemoved() { }
-    public void OnSms(SmsMessage sms) { }
-    public void OnCall(PhoneCall call) { }
     public void OnClipboard(string text) { }
     public void OnDrop(DropOffer offer) { }
     public void OnScreenState(string state) { }

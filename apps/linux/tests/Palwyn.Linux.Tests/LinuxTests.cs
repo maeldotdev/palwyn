@@ -42,6 +42,28 @@ public class NotifyTextTests
     public void Phone_text_stays_text(string text, string escaped) => Assert.Equal(escaped, NotifyText.Escape(text));
 }
 
+public class NotifyActionTests
+{
+    static readonly PhoneNotification WhatsApp = new("k", "com.whatsapp", "WhatsApp", "Mika", "See you at 7", DateTimeOffset.UnixEpoch,
+        true, [new NotificationAction(0, "Reply", true), new NotificationAction(1, "Mark as read", false)], false);
+
+    [Fact]
+    public void Buttons_are_the_phones_actions_then_open()
+    {
+        Assert.Equal([("a0", "Reply…"), ("a1", "Mark as read"), ("default", "Open")], DesktopNotifier.ButtonsFor(WhatsApp));
+    }
+
+    [Theory]
+    [InlineData("a1", 1)]
+    [InlineData("a0", 0)]
+    [InlineData("default", null)]
+    [InlineData("a7", null)]
+    [InlineData("answer", null)]
+    [InlineData("a", null)]
+    public void A_button_maps_back_to_its_action(string id, int? index) =>
+        Assert.Equal(index, DesktopNotifier.Chosen(WhatsApp, id)?.Index);
+}
+
 public class IdentityFileTests
 {
     [Fact]

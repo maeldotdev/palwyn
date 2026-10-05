@@ -22,6 +22,8 @@ public sealed class Settings
     public string? ActivePhone { get; set; }
     /// <summary>Show phone notifications on this desktop.</summary>
     public bool Notifications { get; set; } = true;
+    /// <summary>Keep the phone's notifications in a list on this PC after they leave the phone.</summary>
+    public bool NotificationHistory { get; set; } = true;
     /// <summary>"system", "dark" or "light".</summary>
     public string Theme { get; set; } = "system";
 

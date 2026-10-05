@@ -31,6 +31,7 @@ public sealed class App : Application
 
     static Socket? _instance;
     MainWindow? _main;
+    CallWindow? _call;
     TrayIcon? _tray;
     NativeMenuItem? _trayStatus;
 
@@ -62,6 +63,9 @@ public sealed class App : Application
         Log.Prune();
         Host = new LinuxHost(Settings, action => Dispatcher.UIThread.Post(action));
         Link = new LinkManager(Host, IdentityFile.Load(Paths.Data), Paths.Data, Discovery, new NoUsb());
+        Host.Link = Link;
+        Host.Open = ShowMain;
+        Host.CallChanged += () => (_call ??= new CallWindow()).Show(Host.Call);
         Log.Info($"Palwyn {Host.AppVersion} starting");
 
         HasTray = !OperatingSystem.IsLinux() || TrayHostRunning();
@@ -74,10 +78,10 @@ public sealed class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    public void ShowMain(string page = "home")
+    public void ShowMain(string page = "home", string? item = null)
     {
         _main ??= new MainWindow();
-        _main.Navigate(page);
+        _main.Navigate(page, item);
         _main.Show();
         _main.Activate();
     }

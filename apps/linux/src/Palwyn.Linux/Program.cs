@@ -142,6 +142,7 @@ async Task<int> Run()
     host.StatusChanged += () => { if (host.Status is { State: ConnectionState.Blocked, Detail: { } why }) blocked.TrySetResult(why); };
     var discovery = new AvahiDiscovery();
     using var link = new LinkManager(host, identity, dataDir, discovery, new NoUsb());
+    host.Link = link;
     Console.WriteLine($"Connecting to {phone.Name}. Ctrl+C to stop.");
     link.Start();
     if (discovery.Problem is { } problem) Console.Error.WriteLine($"{problem} Only the last known address is tried.");

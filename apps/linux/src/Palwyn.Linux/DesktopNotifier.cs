@@ -5,57 +5,132 @@ using Palwyn.Core;
 namespace Palwyn.Linux;
 
 /// <summary>
-/// Phone notifications as desktop notifications (the freedesktop notification spec, which GNOME, KDE and the
-/// others implement) through <c>notify-send</c> (libnotify) and <c>gdbus</c> (GLib).
+/// Desktop notifications (the freedesktop notification spec, which GNOME, KDE and the others implement) through
+/// <c>notify-send</c> (libnotify) and <c>gdbus</c> (GLib). Buttons need libnotify 0.7.10 or later (Ubuntu 22.10+,
+/// Fedora 36+); with an older one the notification shows without them. Call from one thread at a time.
 /// </summary>
-// ponytail: one process per notification; switch to D-Bus bindings once the app has them (Phase 4).
+// ponytail: one process per notification, and one waiting per notification with buttons; switch to D-Bus bindings
+// if that ever costs too much.
 public sealed class DesktopNotifier
 {
-    readonly Dictionary<string, (uint Id, PhoneNotification Last)> _shown = [];
-    bool _warned;
+    sealed record Shown(uint Id, Process? Waiting);
 
-    /// <summary>NOTIFICATION_POSTED. Ones already on the phone when it connected, and reposts that change nothing
-    /// the user reads, don't pop up.</summary>
-    public async Task PostedAsync(PhoneNotification n)
+    readonly Dictionary<string, Shown> _shown = [];
+    readonly Dictionary<string, PhoneNotification> _phone = [];
+    bool _missing, _noButtons;
+
+    /// <summary>
+    /// Shows, or replaces, the notification for <paramref name="key"/>. <paramref name="onAction"/> gets the id of
+    /// the button the user picked ("default" when they click the notification itself), on another thread.
+    /// </summary>
+    public async Task ShowAsync(string key, string app, string title, string body,
+        IReadOnlyList<(string Id, string Label)> actions, Action<string>? onAction)
     {
-        _shown.TryGetValue(n.Key, out var shown);
-        if (!n.AlertsOver(shown.Last))
-        {
-            if (shown.Last is not null) _shown[n.Key] = shown with { Last = n };
-            return;
-        }
-        List<string> args = ["--app-name=" + n.AppName, "--print-id"];
-        if (shown.Id != 0) args.Add("--replace-id=" + shown.Id);
+        if (_missing) return;
+        _shown.TryGetValue(key, out var old);
+        Stop(old);
+        bool buttons = actions.Count > 0 && onAction is not null && !_noButtons;
+        List<string> args = ["--app-name=" + app];
+        if (!_noButtons) args.Add("--print-id");
+        if (!_noButtons && old is { Id: > 0 }) args.Add($"--replace-id={old.Id}");
+        if (buttons) args.AddRange(actions.Select(a => $"--action={a.Id}={a.Label}"));
         // The summary is plain text; the body may be rendered as markup, so it's escaped.
-        args.AddRange(["--", n.Title ?? n.AppName, NotifyText.Escape(n.Text ?? "")]);
-        var id = await RunAsync("notify-send", args);
-        _shown[n.Key] = (uint.TryParse(id, out var i) ? i : 0, n);
-    }
+        args.AddRange(["--", title, NotifyText.Escape(body)]);
 
-    /// <summary>NOTIFICATION_REMOVED: closes it on the desktop too.</summary>
-    public async Task RemovedAsync(string key)
-    {
-        if (!_shown.Remove(key, out var shown) || shown.Id == 0) return;
-        await RunAsync("gdbus", ["call", "--session", "--dest", "org.freedesktop.Notifications",
-            "--object-path", "/org/freedesktop/Notifications",
-            "--method", "org.freedesktop.Notifications.CloseNotification", shown.Id.ToString()]);
-    }
-
-    async Task<string> RunAsync(string file, List<string> args)
-    {
+        Process p;
         try
         {
-            using var p = Process.Start(new ProcessStartInfo(file, args) { RedirectStandardOutput = true, RedirectStandardError = true })!;
-            var output = await p.StandardOutput.ReadToEndAsync();
-            await p.WaitForExitAsync();
-            return output.Trim();
+            p = Process.Start(new ProcessStartInfo("notify-send", args) { RedirectStandardOutput = true, RedirectStandardError = true })!;
         }
         catch (Win32Exception)
         {
-            if (!_warned) Console.Error.WriteLine($"Can't show desktop notifications: {file} isn't installed (packages libnotify-bin, libglib2.0-bin).");
-            _warned = true;
-            return "";
+            _missing = true;
+            Log.Info("Desktop notifications off: notify-send isn't installed (package libnotify-bin or libnotify)");
+            return;
         }
+        var first = await p.StandardOutput.ReadLineAsync();
+        if (first is null && !_noButtons)
+        {
+            await p.WaitForExitAsync();
+            if (p.ExitCode != 0) // an older notify-send without --print-id, --replace-id and --action
+            {
+                p.Dispose();
+                _noButtons = true;
+                Log.Info("notify-send is older than libnotify 0.7.10: notifications without buttons");
+                await ShowAsync(key, app, title, body, actions, onAction);
+                return;
+            }
+        }
+        var shown = new Shown(uint.TryParse(first, out var id) ? id : 0, buttons ? p : null);
+        _shown[key] = shown;
+        if (!buttons)
+        {
+            p.Dispose();
+            return;
+        }
+        // With buttons notify-send waits, then prints the chosen one (nothing if the notification is just closed).
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (await p.StandardOutput.ReadLineAsync() is { Length: > 0 } action) onAction!(action);
+            }
+            catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException) { }
+        });
+    }
+
+    /// <summary>Closes the notification for <paramref name="key"/> on the desktop, if it's still there.</summary>
+    public async Task CloseAsync(string key)
+    {
+        if (!_shown.Remove(key, out var shown)) return;
+        Stop(shown);
+        if (shown.Id == 0) return;
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo("gdbus", ["call", "--session", "--dest", "org.freedesktop.Notifications",
+                "--object-path", "/org/freedesktop/Notifications",
+                "--method", "org.freedesktop.Notifications.CloseNotification", shown.Id.ToString()])
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            })!;
+            await p.WaitForExitAsync();
+        }
+        catch (Win32Exception) { } // no gdbus: it stays until the user closes it
+    }
+
+    /// <summary>The waiting notify-send for a replaced or closed notification: its buttons now belong to the new one.</summary>
+    static void Stop(Shown? shown)
+    {
+        if (shown?.Waiting is not { } p) return;
+        try { p.Kill(); } catch (InvalidOperationException) { }
+        p.Dispose();
+    }
+
+    /// <summary>NOTIFICATION_POSTED. Ones already on the phone when it connected, and reposts that change nothing
+    /// the user reads, don't pop up.</summary>
+    public Task PostedAsync(PhoneNotification n, Action<string>? onAction = null)
+    {
+        _phone.TryGetValue(n.Key, out var before);
+        _phone[n.Key] = n;
+        if (!n.AlertsOver(before)) return Task.CompletedTask;
+        return ShowAsync("n:" + n.Key, n.AppName, n.Title ?? n.AppName, n.Text ?? "", ButtonsFor(n), onAction);
+    }
+
+    /// <summary>The phone notification's own actions ("a<index>"; a reply one ends in …, as it opens a reply box),
+    /// and "default" for a click on the notification itself.</summary>
+    public static List<(string Id, string Label)> ButtonsFor(PhoneNotification n) =>
+        [.. n.Actions.Select(a => ($"a{a.Index}", a.Reply ? $"{a.Title}…" : a.Title)), ("default", "Open")];
+
+    /// <summary>The action a button id from <see cref="ButtonsFor"/> stands for; null for "default" or anything else.</summary>
+    public static NotificationAction? Chosen(PhoneNotification n, string id) =>
+        id.StartsWith('a') && int.TryParse(id.AsSpan(1), out var i) ? n.Actions.FirstOrDefault(a => a.Index == i) : null;
+
+    /// <summary>NOTIFICATION_REMOVED: closes it on the desktop too.</summary>
+    public Task RemovedAsync(string key)
+    {
+        _phone.Remove(key);
+        return CloseAsync("n:" + key);
     }
 }
 
