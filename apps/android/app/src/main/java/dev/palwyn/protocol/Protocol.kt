@@ -116,7 +116,7 @@ object Catalog {
         "HELLO" to TypeSpec(null, null) { p ->
             val pr = p.value("protocol") as? JSONObject
             pr != null && pr.int("min", 1, 1000) && pr.int("max", 1, 1000) && p.str("app", 32) &&
-                p.hex("deviceId", 32) && p.str("name", 64) && p.oneOf("platform", "android", "windows") &&
+                p.hex("deviceId", 32) && p.str("name", 64) && p.oneOf("platform", "android", "windows", "linux") &&
                 p.strArray("capabilities") && p.int("keepAlive", 1, 300, optional = true)
         },
         "PING" to TypeSpec(null, null, any),

@@ -27,7 +27,7 @@ public static class Catalog
         ["HELLO"] = new(null, null, p =>
             p["protocol"] is JsonObject pr && Check.Int(pr, "min", 1, 1000) && Check.Int(pr, "max", 1, 1000)
             && Check.Str(p, "app", 32) && Check.Hex(p, "deviceId", 32) && Check.Str(p, "name", 64)
-            && Check.Enum(p, "platform", "android", "windows") && Check.StrArray(p, "capabilities")
+            && Check.Enum(p, "platform", "android", "windows", "linux") && Check.StrArray(p, "capabilities")
             && Check.Int(p, "keepAlive", 1, 300, optional: true)),
         ["PING"] = new(null, null, Any),
         ["PONG"] = new(null, null, Any),

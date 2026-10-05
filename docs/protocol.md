@@ -60,6 +60,8 @@ Both sides send `HELLO` immediately after TLS; neither sends anything else until
 }
 ```
 
+`platform` is `android`, `windows` or `linux`. Phones older than Palwyn 0.15 accept only the first two, so a Linux PC needs Palwyn 0.15 or later on the phone.
+
 `keepAlive` (optional, 1–300 s, phone only): how often the PC should `PING`. Phones on OEMs that freeze background apps ask for 3 s; incoming traffic is what wakes them.
 
 - Negotiated version = highest major in both ranges. No overlap → send `ERROR INCOMPATIBLE_VERSION`, close, state `Incompatible` (no retry).
