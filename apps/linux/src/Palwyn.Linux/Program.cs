@@ -9,7 +9,7 @@ using QRCoder;
 
 const int PhonePort = 47800;
 var dataDir = Paths.Data;
-if (args is [] or ["--hidden"]) return Gui(args);
+if (args is [] or ["--hidden"] or ["send", _, ..]) return Gui(args);
 
 var identity = IdentityFile.Load(dataDir);
 var pcFingerprint = Fingerprint.Of(identity);
@@ -39,7 +39,13 @@ catch (OperationCanceledException) when (quit.IsCancellationRequested)
 
 static int Gui(string[] args)
 {
-    if (App.HandOffToRunningCopy()) return 0; // the running copy shows its window
+    if (args is ["send", .. var files])
+    {
+        var paths = files.Select(Path.GetFullPath).ToList();
+        if (App.HandOffToRunningCopy(string.Join('\n', ["send", .. paths]))) return 0; // the running copy sends them
+        App.SendAtStart = paths;
+    }
+    else if (App.HandOffToRunningCopy()) return 0; // the running copy shows its window
     App.StartHidden = args is ["--hidden"];
     var run = () => AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace().StartWithClassicDesktopLifetime(args);
     if (!OperatingSystem.IsWindows()) return run();
@@ -57,6 +63,7 @@ int Usage()
     Console.WriteLine("""
         Usage: palwyn-linux [command]
           (none)                     open Palwyn (tray and window); --hidden starts it in the tray
+          send FILE...               send files or folders to the phone (through the running Palwyn)
           pair                       show a QR code to scan with Palwyn on the phone, then pair
           pair --address <ip[:port]> the same, for a network where the PC can't find the phone by itself
           run                        stay connected and show the phone's notifications on this desktop

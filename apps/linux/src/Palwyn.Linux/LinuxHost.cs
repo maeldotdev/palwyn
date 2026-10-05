@@ -22,6 +22,8 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public LinkManager? Link { get; set; }
     /// <summary>The window, when there is one: opens a page ("notifications", "messages", "calls") at an item.</summary>
     public Action<string, string?>? Open { get; set; }
+    /// <summary>The window's clipboard, when there is one.</summary>
+    public ClipboardSync? Clipboard { get; set; }
     /// <summary>The conversation the user is reading in the focused window: its texts need no desktop notification.</summary>
     public string? ViewingThread { get; set; }
 
@@ -60,7 +62,8 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public string Platform => "linux";
     public string AppVersion => typeof(LinuxHost).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
     public IReadOnlyCollection<string> PcCapabilities { get; } =
-        ["device", "calls.state", "calls.control", "calls.log", "sms.read", "sms.send", "notifications.read", "notifications.act"];
+        ["device", "calls.state", "calls.control", "calls.log", "sms.read", "sms.send", "notifications.read", "notifications.act",
+            "photos.read", "drop", "clipboard", "contacts.read", "contacts.write", "camera"];
 
     public string? ActivePhone
     {
@@ -203,9 +206,71 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
                 [("default", "Open")], _ => Post(() => Open?.Invoke("messages", m.ThreadId))));
     }
 
+    // ---- From the phone: clipboard and shares ----
+
+    public void OnClipboard(string text)
+    {
+        if (Clipboard is not { } clipboard) return;
+        _ = clipboard.ReceivedAsync(text);
+        OnActivity("", "Copied from your phone");
+    }
+
+    /// <summary>
+    /// Something shared to this PC from the phone ("Share > Palwyn"), a copied image or a photo taken for the PC. The
+    /// user chose this PC on the phone, so files are saved without asking: photos and videos to Pictures/Palwyn, the
+    /// rest to Downloads/Palwyn; a desktop notification says where.
+    /// </summary>
+    public void OnDrop(DropOffer offer) => _ = ReceiveAsync(offer);
+
+    async Task ReceiveAsync(DropOffer offer)
+    {
+        var link = Link!;
+        var phone = Status.PhoneName ?? "your phone";
+        if (offer.Text is { } text)
+            Then(() => _notifier.ShowAsync("drop:" + offer.Id, "Palwyn", $"From {phone}", text,
+                [("copy", "Copy")], _ => Post(() => Clipboard?.ReceivedAsync(text))));
+        if (offer.Files.Count == 0)
+        {
+            await link.DropResultAsync(offer.Id, true);
+            return;
+        }
+        var saved = new List<string>();
+        try
+        {
+            if (offer.Purpose == "clipboard" && offer.Files is [var image])
+            {
+                var temp = Path.Combine(Path.GetTempPath(), $"palwyn-clipboard-{offer.Id}-{PhonePhoto.SafeFileName(image.Name, image.Mime)}");
+                await link.DownloadAsync("drop", $"{offer.Id}:{image.Index}", temp, null, CancellationToken.None);
+                bool ok = Clipboard is { } clipboard && await clipboard.ReceivedImageAsync(temp);
+                await link.DropResultAsync(offer.Id, ok);
+                return;
+            }
+            var taken = new HashSet<string>();
+            foreach (var f in offer.Files)
+            {
+                var folder = f.Mime.StartsWith("image/") || f.Mime.StartsWith("video/") ? Paths.Pictures : Paths.Downloads;
+                Directory.CreateDirectory(folder);
+                var path = PhonePhoto.UniquePath(folder, PhonePhoto.SafeFileName(f.Name, f.Mime), taken);
+                await link.DownloadAsync("drop", $"{offer.Id}:{f.Index}", path, null, CancellationToken.None);
+                saved.Add(path);
+            }
+            await link.DropResultAsync(offer.Id, true);
+            var where = Path.GetDirectoryName(saved[^1])!;
+            Then(() => _notifier.ShowAsync("drop:" + offer.Id, "Palwyn",
+                saved.Count == 1 ? $"Received {Path.GetFileName(saved[0])}" : $"Received {saved.Count} files",
+                $"From {phone}, in {where}", [("default", "Open folder")], _ => Paths.Open(where)));
+            OnActivity("", saved.Count == 1 ? $"Received {Path.GetFileName(saved[0])}" : $"Received {saved.Count} files");
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Log($"Receiving from the phone failed after {saved.Count} of {offer.Files.Count}: {e.GetType().Name}: {e.Message}");
+            try { await link.DropResultAsync(offer.Id, false); } catch (Exception) { }
+            Then(() => _notifier.ShowAsync("drop:" + offer.Id, "Palwyn", "Not everything arrived",
+                $"{saved.Count} of {offer.Files.Count} files from {phone} were saved. Share them again.", [], null));
+        }
+    }
+
     // Not built on Linux yet (later phases); the phone doesn't send these without the capability.
-    public void OnClipboard(string text) { }
-    public void OnDrop(DropOffer offer) { }
     public void OnScreenState(string state) { }
     public void OnEmergencyHint(AdbDevice device) { }
     public void OnRemoteInput(string type, JsonObject payload) { }

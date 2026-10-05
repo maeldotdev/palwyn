@@ -21,7 +21,9 @@ Why the certificate step: Windows only installs signed apps. Palwyn is signed wi
 
 ## Linux (early)
 
-The Linux app is new. It pairs, keeps the phone connected and shows its status; answers and declines calls (the call card and a desktop notification with buttons); reads and sends texts; and shows the phone's notifications, with their actions, replies and a searchable history. Photos, files, the clipboard and the remote come later. It needs Palwyn 0.15 or later on the phone.
+The Linux app is new. It pairs, keeps the phone connected and shows its status; answers and declines calls (the call card and a desktop notification with buttons); reads and sends texts; shows the phone's notifications, with their actions, replies and a searchable history; saves photos and videos to Pictures/Palwyn; sends files, folders and text to the phone (also `palwyn-linux send FILE…`) and saves what the phone shares to Pictures/Palwyn or Downloads/Palwyn; shares the clipboard; and lets you browse and edit contacts. The remote, the phone screen and USB come later.
+
+Clipboard: the phone's "Send clipboard to PC" always works. Sending what you copy on the PC automatically (Settings, off by default) works on X11, and on Wayland on KDE and wlroots desktops with `wl-clipboard` installed. GNOME on Wayland doesn't let any app watch the clipboard, so there use **Send clipboard** on the Send to phone page. It needs Palwyn 0.15 or later on the phone.
 
 1. Download `Palwyn-<version>-linux-x86_64.AppImage`.
 2. Make it executable: right-click > Properties > "Allow executing file as program", or `chmod +x Palwyn-*.AppImage`.

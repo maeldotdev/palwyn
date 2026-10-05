@@ -37,7 +37,7 @@ public sealed partial class MainWindow : Window
         Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://palwyn-linux/Assets/icon.png")));
 
         var nav = new StackPanel { Spacing = 4, Margin = new Thickness(12) };
-        foreach (var (page, label) in new[] { ("home", "Home"), ("calls", "Calls"), ("messages", "Messages"), ("notifications", "Notifications"), ("add", "Add a phone"), ("settings", "Settings") })
+        foreach (var (page, label) in new[] { ("home", "Home"), ("calls", "Calls"), ("messages", "Messages"), ("notifications", "Notifications"), ("photos", "Photos"), ("send", "Send to phone"), ("contacts", "Contacts"), ("add", "Add a phone"), ("settings", "Settings") })
         {
             var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch };
             b.Click += (_, _) => Navigate(page);
@@ -50,7 +50,11 @@ public sealed partial class MainWindow : Window
         grid.Children.Add(_scroll);
         Content = grid;
 
-        App.Host.StatusChanged += () => RefreshIf("home");
+        App.Host.StatusChanged += () =>
+        {
+            RefreshIf("home");
+            if (Link.IsConnected) _ = SendPendingAsync(); // files queued while the phone was away
+        };
         App.Host.ActivityChanged += () => RefreshIf("home");
         Link.DashboardChanged += () => RefreshIf("home");
         App.Host.NotificationsChanged += () => RefreshIf("notifications");
@@ -83,6 +87,8 @@ public sealed partial class MainWindow : Window
         if (page == "calls") _ = LoadCallsAsync();
         if (page == "messages") _ = item is null ? LoadThreadsAsync() : OpenThreadAsync(item);
         if (page == "notifications") _replyKey = item;
+        if (page == "photos" && _photos.Count == 0) _ = LoadPhotosAsync();
+        if (page == "contacts") { _editing = null; _ = LoadContactsAsync(); }
         UpdateViewing();
         Refresh();
     }
@@ -103,6 +109,9 @@ public sealed partial class MainWindow : Window
             "calls" => CallsPage(),
             "messages" => MessagesPage(),
             "notifications" => NotificationsPage(),
+            "photos" => PhotosPage(),
+            "send" => SendPage(),
+            "contacts" => ContactsPage(),
             _ => HomePage(),
         };
         if (focused is not null && TopLevel.GetTopLevel(focused) is not null) focused.Focus();
@@ -388,6 +397,16 @@ public sealed partial class MainWindow : Window
         var autostart = new ToggleSwitch { Content = "Start Palwyn when you sign in", IsChecked = Settings.Autostart };
         autostart.IsCheckedChanged += (_, _) => Settings.Autostart = autostart.IsChecked == true;
         page.Children.Add(autostart);
+        var clipboard = new ToggleSwitch { Content = "Send what I copy on this PC to my phone", IsChecked = App.Settings.ClipboardToPhone };
+        clipboard.IsCheckedChanged += (_, _) =>
+        {
+            App.Settings.ClipboardToPhone = clipboard.IsChecked == true;
+            App.Settings.Save();
+            App.Host.Clipboard?.Update(Link.IsConnected);
+            DispatcherTimer.RunOnce(() => RefreshIf("settings"), TimeSpan.FromSeconds(1)); // a watch that can't start says why
+        };
+        page.Children.Add(clipboard);
+        if (App.Settings.ClipboardToPhone && App.Host.Clipboard?.AutoProblem is { } clipProblem) page.Children.Add(Text(clipProblem, 12, opacity: 0.7));
 
         var theme = new ComboBox { ItemsSource = new[] { "System theme", "Dark", "Light" } };
         theme.SelectedIndex = App.Settings.Theme switch { "dark" => 1, "light" => 2, _ => 0 };

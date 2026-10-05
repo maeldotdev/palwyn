@@ -41,7 +41,8 @@ public sealed record PhonePhoto(string Id, string? Name, DateTimeOffset Date, in
         n = n[(n.LastIndexOfAny(['/', '\\']) + 1)..]; // no folders; ":" etc. are replaced below
         foreach (var c in WindowsInvalid) n = n.Replace(c, '_');
         n = n.Trim().TrimEnd('.');
-        if (n.Length == 0 || n.Length > 200) n = mime.StartsWith("video/") ? "video.mp4" : "photo" + (mime == "image/png" ? ".png" : ".jpg");
+        // 255 bytes is the name limit on Linux file systems (and 200 characters keeps Windows paths short).
+        if (n.Length == 0 || n.Length > 200 || System.Text.Encoding.UTF8.GetByteCount(n) > 240) n = mime.StartsWith("video/") ? "video.mp4" : "photo" + (mime == "image/png" ? ".png" : ".jpg");
         // Device names Windows reserves ("CON", "nul.txt", "COM1.jpg") would open a device, not a file.
         var stem = n.Split('.')[0].TrimEnd().ToUpperInvariant();
         if (stem is "CON" or "PRN" or "AUX" or "NUL" || (stem.Length == 4 && stem[..3] is "COM" or "LPT" && char.IsAsciiDigit(stem[3])))

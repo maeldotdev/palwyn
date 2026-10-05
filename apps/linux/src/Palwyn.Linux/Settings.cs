@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Palwyn.Linux;
@@ -14,6 +16,35 @@ public static class Paths
     public static string Config => Xdg("XDG_CONFIG_HOME", ".config");
     public static string Logs => Path.Combine(Xdg("XDG_STATE_HOME", ".local", "state"), "logs");
     public static string Autostart => Path.Combine(Path.GetDirectoryName(Config)!, "autostart", "dev.palwyn.Palwyn.desktop");
+
+    static string? _pictures, _downloads;
+    /// <summary>Saved and received photos and videos: Pictures/Palwyn, in the user's language.</summary>
+    public static string Pictures => _pictures ??= Path.Combine(UserDir("PICTURES", "Pictures"), "Palwyn");
+    /// <summary>Other received files: Downloads/Palwyn.</summary>
+    public static string Downloads => _downloads ??= Path.Combine(UserDir("DOWNLOAD", "Downloads"), "Palwyn");
+
+    /// <summary>The desktop's own folder names (xdg-user-dir: "Bilder", "Imágenes"...), else the English default.</summary>
+    static string UserDir(string name, string fallback)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo("xdg-user-dir", [name]) { RedirectStandardOutput = true, RedirectStandardError = true })!;
+            var dir = p.StandardOutput.ReadToEnd().Trim();
+            p.WaitForExit();
+            if (dir.Length > 0 && dir != home) return dir; // it answers the home folder when the folder isn't set
+        }
+        catch (Win32Exception) { }
+        return Path.Combine(home, fallback);
+    }
+
+    /// <summary>Opens a folder in the file manager.</summary>
+    public static void Open(string folder)
+    {
+        Directory.CreateDirectory(folder);
+        try { Process.Start(new ProcessStartInfo("xdg-open", [folder]) { UseShellExecute = false })?.Dispose(); }
+        catch (Win32Exception) { Log.Info("xdg-open isn't installed"); }
+    }
 }
 
 /// <summary>The user's choices, as a small JSON file in the config folder. Same names as the Windows app's settings.</summary>
@@ -24,6 +55,8 @@ public sealed class Settings
     public bool Notifications { get; set; } = true;
     /// <summary>Keep the phone's notifications in a list on this PC after they leave the phone.</summary>
     public bool NotificationHistory { get; set; } = true;
+    /// <summary>Send every text copied on this PC to the phone. Off by default, as on Windows.</summary>
+    public bool ClipboardToPhone { get; set; }
     /// <summary>"system", "dark" or "light".</summary>
     public string Theme { get; set; } = "system";
 

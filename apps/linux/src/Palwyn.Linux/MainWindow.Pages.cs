@@ -366,5 +366,6 @@ public sealed partial class MainWindow
             }
         };
         _search.TextChanged += (_, _) => RefreshIf("notifications");
+        _contactSearch.TextChanged += (_, _) => RefreshIf("contacts");
     }
 }

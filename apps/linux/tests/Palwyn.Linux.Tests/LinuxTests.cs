@@ -64,6 +64,30 @@ public class NotifyActionTests
         Assert.Equal(index, DesktopNotifier.Chosen(WhatsApp, id)?.Index);
 }
 
+public class ClipboardEchoTests
+{
+    [Fact]
+    public void A_copy_goes_once_and_never_bounces_back()
+    {
+        var echo = new ClipboardEcho();
+        echo.Received("already there at start");
+        Assert.False(echo.ShouldSend("already there at start"));
+        Assert.True(echo.ShouldSend("new copy"));
+        Assert.False(echo.ShouldSend("new copy")); // the same copy seen again
+        echo.Received("from the phone");
+        Assert.False(echo.ShouldSend("from the phone")); // set by us, not copied by the user
+        Assert.True(echo.ShouldSend("new copy")); // copied again after something else: send
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void Nothing_to_send(string? text) => Assert.False(new ClipboardEcho().ShouldSend(text));
+
+    [Fact]
+    public void Too_long_to_send() => Assert.False(new ClipboardEcho().ShouldSend(new string('x', 50_001)));
+}
+
 public class IdentityFileTests
 {
     [Fact]

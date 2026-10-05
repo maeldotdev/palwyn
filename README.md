@@ -73,7 +73,7 @@ The full threat model, what is stored where, and the results of the security aud
 
 | | |
 |---|---|
-| **PC** | Windows 10 (version 2004) or Windows 11, 64-bit; or Linux, 64-bit (early: calls, messages, notifications and status so far) |
+| **PC** | Windows 10 (version 2004) or Windows 11, 64-bit; or Linux, 64-bit (early: everything but the remote, phone screen and USB so far) |
 | **Phone** | Android 10 or later |
 | **Network** | Phone and PC on the same Wi-Fi for pairing; after that, Wi-Fi, USB cable (with USB debugging) or an address you set |
 

@@ -21,6 +21,8 @@ public sealed class App : Application
     public static new App Current => (App)Application.Current!;
     /// <summary>Started by the desktop session (autostart): stay in the tray.</summary>
     public static bool StartHidden { get; set; }
+    /// <summary>Files from "palwyn-linux send" when this copy is the one starting: sent once the window is up.</summary>
+    public static IReadOnlyList<string> SendAtStart { get; set; } = [];
 
     public Settings Settings { get; } = Settings.Load();
     public LinuxHost Host { get; private set; } = null!;
@@ -64,6 +66,9 @@ public sealed class App : Application
         Host = new LinuxHost(Settings, action => Dispatcher.UIThread.Post(action));
         Link = new LinkManager(Host, IdentityFile.Load(Paths.Data), Paths.Data, Discovery, new NoUsb());
         Host.Link = Link;
+        // The clipboard belongs to a window; the main window exists (hidden) from here on.
+        Host.Clipboard = new ClipboardSync(Settings, () => (_main ??= new MainWindow()).Clipboard);
+        Host.StatusChanged += () => Host.Clipboard.Update(Link.IsConnected);
         Host.Open = ShowMain;
         Host.CallChanged += () => (_call ??= new CallWindow()).Show(Host.Call);
         Log.Info($"Palwyn {Host.AppVersion} starting");
@@ -74,7 +79,8 @@ public sealed class App : Application
         Host.StatusChanged += UpdateTray;
         Link.Start();
         if (Discovery.Problem is { } problem) Log.Info($"Discovery off: {problem}");
-        if (!StartHidden || !HasTray) ShowMain();
+        if (SendAtStart.Count > 0) Send(SendAtStart);
+        else if (!StartHidden || !HasTray) ShowMain();
         base.OnFrameworkInitializationCompleted();
     }
 
@@ -84,6 +90,13 @@ public sealed class App : Application
         _main.Navigate(page, item);
         _main.Show();
         _main.Activate();
+    }
+
+    /// <summary>Opens Send to phone with these files; they go as soon as the phone is connected.</summary>
+    public void Send(IReadOnlyList<string> paths)
+    {
+        ShowMain("send");
+        _main!.QueueFiles(paths);
     }
 
     public void Quit()
@@ -161,7 +174,8 @@ public sealed class App : Application
     /// True when Palwyn is already running: it's asked to show its window and this copy should exit. Otherwise this
     /// copy listens for later launches. A Unix socket in the user's runtime folder, which only the user can open.
     /// </summary>
-    public static bool HandOffToRunningCopy()
+    /// <param name="message">"show", or "send" and a file path per line.</param>
+    public static bool HandOffToRunningCopy(string message = "show")
     {
         var dir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR") is { Length: > 0 } r ? r : Path.GetTempPath();
         var endpoint = new UnixDomainSocketEndPoint(Path.Combine(dir, "palwyn.sock"));
@@ -169,7 +183,8 @@ public sealed class App : Application
         {
             using var client = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
             client.Connect(endpoint);
-            client.Send("show\n"u8);
+            client.Send(System.Text.Encoding.UTF8.GetBytes(message));
+            client.Shutdown(SocketShutdown.Send);
             return true;
         }
         catch (SocketException) { }
@@ -194,7 +209,14 @@ public sealed class App : Application
                 while (true)
                 {
                     using var c = await _instance.AcceptAsync();
-                    Dispatcher.UIThread.Post(() => (Application.Current as App)?.ShowMain());
+                    using var reader = new StreamReader(new NetworkStream(c), System.Text.Encoding.UTF8);
+                    var lines = (await reader.ReadToEndAsync()).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (Application.Current is not App app) return;
+                        if (lines is ["send", .. var paths]) app.Send(paths);
+                        else app.ShowMain();
+                    });
                 }
             }
             catch (Exception e) when (e is ObjectDisposedException or SocketException) { } // quitting

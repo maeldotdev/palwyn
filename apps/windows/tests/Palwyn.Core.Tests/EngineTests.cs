@@ -417,6 +417,10 @@ public class EngineTests
     [InlineData("com1.jpg", "_com1.jpg")]
     [InlineData("COM.jpg", "COM.jpg")]
     [InlineData("console.jpg", "console.jpg")]
+    [InlineData("a\0b.jpg", "a_b.jpg")]
+    [InlineData("..", "photo.jpg")]
+    [InlineData("Mañana.jpg", "Mañana.jpg")]
+    [InlineData("日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日.jpg", "photo.jpg")] // 256 bytes: too long for a Linux file name
     public void Phone_file_names_are_made_safe(string? name, string expected) =>
         Assert.Equal(expected, PhonePhoto.SafeFileName(name, "image/jpeg"));
 
