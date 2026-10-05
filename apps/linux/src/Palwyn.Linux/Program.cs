@@ -78,7 +78,8 @@ async Task<int> Pair(string? address)
         var found = new TaskCompletionSource<DiscoveredPhone>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var discovery = new AvahiDiscovery();
         discovery.Found += d => { if (d.PairMode == tag) found.TrySetResult(d); };
-        if (discovery.Start() is { } problem)
+        discovery.Start();
+        if (discovery.Problem is { } problem)
         {
             Console.Error.WriteLine($"{problem} Use: palwyn-linux pair --address <the phone's IP address>");
             return 1;
@@ -119,54 +120,19 @@ async Task<int> Run()
         Console.Error.WriteLine("No phone is paired. Run: palwyn-linux pair");
         return 1;
     }
-    var hello = new Hello(Fingerprint.DeviceId(pcFingerprint), pcName, "linux", AppVersion(), ["notifications.read"]);
-    var (host, port) = phone.Endpoint;
-    var notifier = new DesktopNotifier();
-    await using var engine = new LinkEngine(host, port,
-        (h, p, ct) => LinkConnection.ConnectAsync(h, p, identity, fp => PairingCrypto.Same(fp, phone.FingerprintBytes), ct),
-        hello);
-    var stopped = new TaskCompletionSource();
-    engine.StateChanged += s =>
-    {
-        var why = s == EngineState.Waiting && engine.LastError is { } e ? $" ({e.GetType().Name}: {e.Message})" : "";
-        Console.WriteLine($"{DateTime.Now:HH:mm:ss} {s}{why}");
-        if (s is EngineState.Unauthorized or EngineState.Incompatible) stopped.TrySetResult();
-    };
-    engine.Message += async m =>
-    {
-        var p = m["payload"]!.AsObject();
-        switch (m["type"]!.GetValue<string>())
-        {
-            case "NOTIFICATION_POSTED": await notifier.PostedAsync(PhoneNotification.From(p)); break;
-            case "NOTIFICATION_REMOVED": await notifier.RemovedAsync(p["key"]!.GetValue<string>()); break;
-        }
-    };
-
-    // The phone's address changes with DHCP: follow it, unless the user set one.
-    using var discovery = new AvahiDiscovery();
-    if (phone.Address is null)
-    {
-        discovery.Found += d =>
-        {
-            if (d.DeviceId != phone.DeviceId || d.PairMode is not null) return;
-            if (d.Host != engine.Host || d.Port != engine.Port)
-            {
-                phones.Save(phone = phone with { Host = d.Host, Port = d.Port }); // the last known address, for next time
-                engine.UpdateAddress(d.Host, d.Port);
-            }
-            else if (engine.State != EngineState.Connected) engine.Kick();
-        };
-        if (discovery.Start() is { } problem) Console.Error.WriteLine($"{problem} Only the last known address is tried.");
-    }
-
+    // The shared hub (as on Windows): connects, follows the phone's address through discovery, reconnects.
+    var host = new LinuxHost(new DesktopNotifier());
+    var blocked = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+    host.Blocked += why => blocked.TrySetResult(why);
+    var discovery = new AvahiDiscovery();
+    using var link = new LinkManager(host, identity, dataDir, discovery, new NoUsb());
     Console.WriteLine($"Connecting to {phone.Name}. Ctrl+C to stop.");
-    engine.Start();
-    await Task.WhenAny(stopped.Task, Task.Delay(Timeout.Infinite, quit.Token).ContinueWith(_ => { }));
-    if (engine.State == EngineState.Unauthorized)
-        Console.Error.WriteLine("The phone doesn't accept this PC any more (it was removed there, or reinstalled). Pair again: palwyn-linux pair");
-    if (engine.State == EngineState.Incompatible)
-        Console.Error.WriteLine("The phone runs a Palwyn version this PC can't talk to. Update both.");
-    return engine.State is EngineState.Unauthorized or EngineState.Incompatible ? 1 : 0;
+    link.Start();
+    if (discovery.Problem is { } problem) Console.Error.WriteLine($"{problem} Only the last known address is tried.");
+    var ended = await Task.WhenAny(blocked.Task, Task.Delay(Timeout.Infinite, quit.Token).ContinueWith(_ => { }));
+    if (ended != blocked.Task) return 0;
+    Console.Error.WriteLine(blocked.Task.Result);
+    return 1;
 }
 
 int Status()
@@ -186,8 +152,6 @@ int Unpair()
         : "Forgotten. Remove this PC in Palwyn on the phone too, or the phone keeps it in its list.");
     return 0;
 }
-
-static string AppVersion() => typeof(IdentityFile).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
 
 /// <summary>The QR code in half-block characters, black on white whatever the terminal's colours, so it scans.</summary>
 static string TerminalQr(string text)

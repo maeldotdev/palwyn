@@ -16,7 +16,7 @@ public partial class App : Application
     public event Action<SmsMessage>? SmsReceived;
 
     static DispatcherQueue? _ui;
-    public Palwyn.App.Link.LinkManager Link { get; private set; } = null!;
+    public LinkManager Link { get; private set; } = null!;
     TrayIcon? _tray;
     TrayFlyout? _flyout;
     MainWindow? _main;
@@ -41,7 +41,16 @@ public partial class App : Application
         catch (IOException) { } // one is still open in a viewer: it goes next time
         Log.Info($"Palwyn {v.Major}.{v.Minor}.{v.Build} starting");
 
-        Link = new Palwyn.App.Link.LinkManager(_ui!); // before the flyout, which listens to it
+        Link = new LinkManager(new WindowsHost(_ui!), Palwyn.App.Link.IdentityStore.Load(),
+            Windows.Storage.ApplicationData.Current.LocalFolder.Path, new Palwyn.App.Link.PhoneDiscovery(), new Palwyn.App.Link.UsbLink()); // before the flyout, which listens to it
+        Windows.Networking.Connectivity.NetworkInformation.NetworkStatusChanged += _ => Link.NetworkChanged();
+        Microsoft.Windows.System.Power.PowerManager.SystemSuspendStatusChanged += (_, _) =>
+        {
+            var s = Microsoft.Windows.System.Power.PowerManager.SystemSuspendStatus;
+            if (s == Microsoft.Windows.System.Power.SystemSuspendStatus.Entering) Link.Power(suspending: true);
+            else if (s is Microsoft.Windows.System.Power.SystemSuspendStatus.AutoResume or Microsoft.Windows.System.Power.SystemSuspendStatus.ManualResume)
+                Link.Power(suspending: false);
+        };
         _flyout = new TrayFlyout();
         _tray = new TrayIcon(_flyout.Hwnd);
         _tray.Invoked += anchor => _flyout.Toggle(anchor);

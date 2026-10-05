@@ -1,12 +1,10 @@
+using Palwyn.Core.Link;
 using Windows.Devices.Enumeration;
 
 namespace Palwyn.App.Link;
 
-/// <param name="PairMode">"code", "qr:&lt;first 8 hex of the PC fingerprint&gt;", or null when not pairing.</param>
-public sealed record DiscoveredPhone(string Key, string DeviceId, string? PairMode, string? Name, string Host, int Port);
-
 /// <summary>Finds phones advertising <c>_palwyn._tcp</c> using Windows' built-in DNS-SD (no extra dependency).</summary>
-public sealed class PhoneDiscovery : IDisposable
+public sealed class PhoneDiscovery : IPhoneDiscovery
 {
     const string Query =
         "System.Devices.AepService.ProtocolId:=\"{4526e8c1-8aac-4153-9b16-55e86ada0e54}\" AND " +

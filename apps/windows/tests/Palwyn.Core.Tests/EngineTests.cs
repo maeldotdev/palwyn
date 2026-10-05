@@ -13,8 +13,8 @@ using Palwyn.Core.Protocol;
 /// <summary>Connection engine against a fake phone that accepts connection after connection.</summary>
 public class EngineTests
 {
-    static readonly X509Certificate2 PcId = Identity("pc");
-    static readonly X509Certificate2 PhoneId = Identity("phone");
+    internal static readonly X509Certificate2 PcId = Identity("pc");
+    internal static readonly X509Certificate2 PhoneId = Identity("phone");
     static readonly X509Certificate2 ImposterId = Identity("imposter");
     static byte[] Fp(X509Certificate2 c) => Fingerprint.Of(c);
 
@@ -35,7 +35,7 @@ public class EngineTests
     }
 
     /// <summary>Phone that serves every connection with <paramref name="script"/>(connection index, stream).</summary>
-    sealed class FakePhone : IAsyncDisposable
+    internal sealed class FakePhone : IAsyncDisposable
     {
         readonly TcpListener _listener = new(IPAddress.Loopback, 0);
         readonly CancellationTokenSource _cts = new();
@@ -116,7 +116,7 @@ public class EngineTests
             (h, p, ct) => LinkConnection.ConnectAsync(h, p, PcId, fp => PairingCrypto.Same(fp, pinned ?? Fp(PhoneId)), ct),
             new Hello(Fingerprint.DeviceId(Fp(PcId)), "PC", "windows", "0.5.0", []), Fast);
 
-    static async Task Until(Func<bool> condition, int timeoutMs = 8000)
+    internal static async Task Until(Func<bool> condition, int timeoutMs = 8000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (!condition())

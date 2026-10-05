@@ -2,7 +2,7 @@
     x:Class="Palwyn.App.AddPhonePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:link="using:Palwyn.App.Link">
+    xmlns:link="using:Palwyn.Core.Link">
 
     <ScrollViewer>
         <StackPanel

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Palwyn.Core;
+using Palwyn.Core.Link;
 using Windows.Devices.Enumeration;
 
 namespace Palwyn.App.Link;
@@ -9,12 +10,8 @@ namespace Palwyn.App.Link;
 /// same pinned TLS link runs over the cable instead of Wi-Fi. Needs adb (Android SDK platform-tools), which isn't
 /// bundled; without it this does nothing. Checks run only when a USB device comes or goes, not on a timer.
 /// </summary>
-public sealed class UsbLink : IDisposable
+public sealed class UsbLink : IUsbLink
 {
-    public const string Host = "127.0.0.1";
-    public const int LocalPort = 47801;
-    /// <summary>The cable's address; another 127.0.0.1 port is something else (an emulator, the user's own tunnel).</summary>
-    public static bool Is(string host, int port) => host == Host && port == LocalPort;
     // GUID_DEVINTERFACE_USB_DEVICE: any USB device plugged in or out. Without the Enabled filter, a device Windows has
     // seen before comes and goes as Updated, not Added/Removed.
     const string AnyUsbDevice = "System.Devices.InterfaceClassGuid:=\"{A5DCBF10-6530-11D2-901F-00C04FB951ED}\" AND " +
@@ -83,7 +80,7 @@ public sealed class UsbLink : IDisposable
             }
             var phone = lines.FirstOrDefault(d => d.IsReady);
             // ponytail: the first phone on USB only; the link's pinning skips it if it isn't the paired one.
-            forwarded = phone is not null && Adb($"-s {phone.Serial} forward tcp:{LocalPort} tcp:{PhonePort}") is not null;
+            forwarded = phone is not null && Adb($"-s {phone.Serial} forward tcp:{CableLink.LocalPort} tcp:{PhonePort}") is not null;
             // "unauthorized": the phone is asking "Allow USB debugging?" and only the user can answer; look again soon.
             waiting = phone is null && lines.Count > 0;
             Log.Info($"USB: checked, {lines.Count} on USB ({string.Join(", ", lines.Select(d => d.State))}), forwarded: {forwarded}");

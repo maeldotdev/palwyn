@@ -4,25 +4,32 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using Palwyn.Core.Link;
 
 namespace Palwyn.Linux;
-
-/// <param name="PairMode">"code", "qr:&lt;first 8 hex of the PC fingerprint&gt;", or null when not pairing.</param>
-public sealed record DiscoveredPhone(string Key, string DeviceId, string? PairMode, string? Name, string Host, int Port);
 
 /// <summary>
 /// Finds phones advertising <c>_palwyn._tcp</c> through <c>avahi-browse</c> (package avahi-utils), which talks to the
 /// avahi-daemon that most desktops already run.
 /// </summary>
 // ponytail: parses avahi-browse's output; switch to Avahi's D-Bus API once the app has D-Bus bindings (Phase 4).
-public sealed partial class AvahiDiscovery : IDisposable
+public sealed partial class AvahiDiscovery : IPhoneDiscovery
 {
+    readonly Dictionary<string, DiscoveredPhone> _seen = [];
+    readonly Lock _gate = new();
     Process? _browse;
 
     public event Action<DiscoveredPhone>? Found;
+    public event Action<string>? Lost;
+    /// <summary>Why discovery isn't running (avahi-browse missing), or null.</summary>
+    public string? Problem { get; private set; }
 
-    /// <summary>Starts browsing. Returns why it can't, or null.</summary>
-    public string? Start()
+    public IReadOnlyList<DiscoveredPhone> Current
+    {
+        get { lock (_gate) return [.. _seen.Values]; }
+    }
+
+    public void Start()
     {
         try
         {
@@ -35,15 +42,32 @@ public sealed partial class AvahiDiscovery : IDisposable
         }
         catch (Win32Exception)
         {
-            return "avahi-browse isn't installed (package avahi-utils).";
+            Problem = "avahi-browse isn't installed (package avahi-utils).";
+            return;
         }
-        _browse.OutputDataReceived += (_, e) => { if (e.Data is { } line && Parse(line) is { } phone) Found?.Invoke(phone); };
+        _browse.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is not { } line) return;
+            if (Parse(line) is { } phone)
+            {
+                lock (_gate) _seen[phone.Key] = phone;
+                Found?.Invoke(phone);
+            }
+            else if (RemovedKey(line) is { } key)
+            {
+                bool had;
+                lock (_gate) had = _seen.Remove(key);
+                if (had) Lost?.Invoke(key);
+            }
+        };
         _browse.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } line) Console.Error.WriteLine($"Discovery: {line}"); };
         _browse.BeginOutputReadLine();
         _browse.BeginErrorReadLine();
-        return null;
     }
 
+    /// <summary>The key of a phone that went away: <c>-;wlan0;IPv4;Pixel\0327;_palwyn._tcp;local</c>.</summary>
+    public static string? RemovedKey(string line) =>
+        line.Split(';') is ["-", var iface, var protocol, var name, ..] ? $"{iface};{protocol};{name}" : null;
     /// <summary>
     /// One resolved service from <c>avahi-browse --parsable</c>:
     /// <c>=;wlan0;IPv4;Pixel\0327;_palwyn._tcp;local;pixel.local;192.168.1.23;47800;"id=…" "pair=qr:…" "n=Pixel 7"</c>.

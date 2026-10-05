@@ -68,7 +68,7 @@ static class DevArgs
         var expires = DateTimeOffset.UtcNow + Palwyn.Core.Link.PcPairing.InviteLifetime;
         var file = Path.Combine(Windows.Storage.ApplicationData.Current.LocalFolder.Path, "dev-pair-uri.txt");
         await File.WriteAllTextAsync(file, invite.ToUri());
-        var phone = new Link.DiscoveredPhone("dev", "", link.PairingTag, "Emulator", at.Host, at.Port);
+        var phone = new Palwyn.Core.Link.DiscoveredPhone("dev", "", link.PairingTag, "Emulator", at.Host, at.Port);
         try
         {
             while (DateTimeOffset.UtcNow < expires)

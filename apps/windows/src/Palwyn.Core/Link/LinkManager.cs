@@ -1,35 +1,30 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
-using Microsoft.UI.Dispatching;
-using Microsoft.Windows.System.Power;
-using Palwyn.Core;
-using Palwyn.Core.Link;
-using Windows.Networking.Connectivity;
-using Windows.Storage;
-using Package = Windows.ApplicationModel.Package;
 
-namespace Palwyn.App.Link;
+namespace Palwyn.Core.Link;
 
 /// <summary>
 /// Owns this PC's identity, the paired phone and the connection engine for it, and feeds the engine the
 /// signals that should trigger an immediate retry: network changes, resume from sleep, rediscovery.
+/// Shared by the Windows and Linux apps; what differs between them goes through <see cref="IPcHost"/>.
 /// </summary>
 public sealed class LinkManager : IDisposable
 {
-    readonly DispatcherQueue _ui;
+    readonly IPcHost _host;
     readonly X509Certificate2 _identity;
-    readonly PhoneDiscovery _discovery = new();
-    readonly UsbLink _usb = new();
+    readonly IPhoneDiscovery _discovery;
+    readonly IUsbLink _usb;
     readonly Lock _gate = new();
     LinkEngine? _engine;
     PairedPhone? _phone;
+    PhoneStatus _status = PhoneStatus.NotPaired;
     /// <summary>Where the phone is over the network, to go back to when the USB cable is unplugged.</summary>
     (string Host, int Port) _lan;
     int? _battery;
     bool _charging, _wasConnected;
 
     public byte[] Fingerprint { get; }
-    public PairedPhones Phones { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "paired-phones.json"));
+    public PairedPhones Phones { get; }
     public string? PhoneDetails { get; private set; }
     public DeviceInfo? Device { get; private set; }
     public DeviceStatus? DeviceStatus { get; private set; }
@@ -40,14 +35,15 @@ public sealed class LinkManager : IDisposable
     public DateTimeOffset? LastSeen { get; private set; }
     /// <summary>Dashboard data changed (device status, media, capabilities, connection). Raised on the UI thread.</summary>
     public event Action? DashboardChanged;
-    public PhoneDiscovery Discovery => _discovery;
+    public IPhoneDiscovery Discovery => _discovery;
 
-    public LinkManager(DispatcherQueue ui)
+    /// <param name="dataDir">Where paired-phones.json lives.</param>
+    public LinkManager(IPcHost host, X509Certificate2 identity, string dataDir, IPhoneDiscovery discovery, IUsbLink usb)
     {
-        _ui = ui;
-        _identity = IdentityStore.Load();
-        Fingerprint = Core.Fingerprint.Of(_identity);
-        Log.Info($"PC identity {Core.Fingerprint.Display(Core.Fingerprint.DeviceId(Fingerprint))}");
+        (_host, _identity, _discovery, _usb) = (host, identity, discovery, usb);
+        Phones = new(Path.Combine(dataDir, "paired-phones.json"));
+        Fingerprint = Palwyn.Core.Fingerprint.Of(_identity);
+        _host.Log($"PC identity {Palwyn.Core.Fingerprint.Display(Palwyn.Core.Fingerprint.DeviceId(Fingerprint))}");
     }
 
     /// <summary>The phone in use: the one picked in Settings, else the first paired. One is connected at a time.</summary>
@@ -56,7 +52,7 @@ public sealed class LinkManager : IDisposable
         get
         {
             var all = Phones.All();
-            return all.FirstOrDefault(p => p.DeviceId == AppSettings.ActivePhone) ?? all.FirstOrDefault();
+            return all.FirstOrDefault(p => p.DeviceId == _host.ActivePhone) ?? all.FirstOrDefault();
         }
     }
     public string PairingTag => "qr:" + Hex.Of(Fingerprint)[..8];
@@ -65,23 +61,26 @@ public sealed class LinkManager : IDisposable
     {
         _discovery.Found += OnFound;
         _discovery.Start();
-        NetworkInformation.NetworkStatusChanged += _ =>
-        {
-            Log.Info("Network changed");
-            _engine?.Kick();
-        };
-        PowerManager.SystemSuspendStatusChanged += (_, _) =>
-        {
-            var s = PowerManager.SystemSuspendStatus;
-            Log.Info($"Power: {s}");
-            if (s == SystemSuspendStatus.Entering) _engine?.DropConnection();
-            else if (s is SystemSuspendStatus.AutoResume or SystemSuspendStatus.ManualResume) _engine?.Kick();
-        };
         if (Paired is { } p) StartEngine(p);
         else Publish(PhoneStatus.NotPaired);
         _usb.Changed += _ => TryUsb();
-        _usb.DevicesChanged += () => _ui.TryEnqueue(() => UsbDevicesChanged?.Invoke());
+        _usb.DevicesChanged += () => _host.Post(() => UsbDevicesChanged?.Invoke());
         _usb.Start();
+    }
+
+    /// <summary>The PC's network changed: retry now.</summary>
+    public void NetworkChanged()
+    {
+        _host.Log("Network changed");
+        _engine?.Kick();
+    }
+
+    /// <summary>The PC is going to sleep (drop the link) or woke up (retry now).</summary>
+    public void Power(bool suspending)
+    {
+        _host.Log(suspending ? "Power: entering sleep" : "Power: resumed");
+        if (suspending) _engine?.DropConnection();
+        else _engine?.Kick();
     }
 
     long _unreachableSince;
@@ -100,8 +99,8 @@ public sealed class LinkManager : IDisposable
         if (_hinted || state != EngineState.Waiting || Environment.TickCount64 - _unreachableSince < 20_000) return;
         if (_usb.Devices.FirstOrDefault(d => d.IsReady) is not { } device) return;
         _hinted = true;
-        Log.Info("Emergency hint shown");
-        _ui.TryEnqueue(() => Toasts.EmergencyHint(device));
+        _host.Log("Emergency hint shown");
+        _host.Post(() => _host.OnEmergencyHint(device));
     }
 
     /// <summary>Phones on a USB cable, allowed or not: the emergency screen and Rescue files need an allowed one.</summary>
@@ -112,7 +111,7 @@ public sealed class LinkManager : IDisposable
     public void CheckUsb() => _usb.Check();
 
     /// <summary>Connected, or connecting, over the USB cable.</summary>
-    public bool OverUsb => _engine is { } e && UsbLink.Is(e.Host, e.Port);
+    public bool OverUsb => _engine is { } e && CableLink.Is(e.Host, e.Port);
 
     /// <summary>Moves the link to the USB cable when the phone in use is on it, and back to the network when it's unplugged.</summary>
     async void TryUsb()
@@ -120,29 +119,29 @@ public sealed class LinkManager : IDisposable
         if (_engine is not { } engine || _phone is not { } phone) return;
         if (!_usb.Forwarded)
         {
-            if (!UsbLink.Is(engine.Host, engine.Port)) return;
-            Log.Info("Link: USB cable gone, back to the network");
+            if (!CableLink.Is(engine.Host, engine.Port)) return;
+            _host.Log("Link: USB cable gone, back to the network");
             engine.UpdateAddress(_lan.Host, _lan.Port);
             return;
         }
         // Check it's this phone first: the engine treats a different certificate as "needs re-pairing".
         // The phone app may still be starting, so try for a minute.
-        for (int i = 0; i < 20 && _usb.Forwarded && ReferenceEquals(engine, _engine) && !UsbLink.Is(engine.Host, engine.Port); i++)
+        for (int i = 0; i < 20 && _usb.Forwarded && ReferenceEquals(engine, _engine) && !CableLink.Is(engine.Host, engine.Port); i++)
         {
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                await using (await LinkConnection.ConnectAsync(UsbLink.Host, UsbLink.LocalPort, _identity,
+                await using (await LinkConnection.ConnectAsync(CableLink.Host, CableLink.LocalPort, _identity,
                                  fp => PairingCrypto.Same(fp, phone.FingerprintBytes), cts.Token)) { }
-                Log.Info("Link: phone found on USB, switching to the cable");
+                _host.Log("Link: phone found on USB, switching to the cable");
                 _lan = (engine.Host, engine.Port);
-                engine.UpdateAddress(UsbLink.Host, UsbLink.LocalPort);
+                engine.UpdateAddress(CableLink.Host, CableLink.LocalPort);
                 engine.DropConnection(); // a Wi-Fi session reconnects over the cable now
                 return;
             }
             catch (System.Security.Authentication.AuthenticationException)
             {
-                Log.Info("Link: the phone on USB isn't the phone in use");
+                _host.Log("Link: the phone on USB isn't the phone in use");
                 return;
             }
             catch (Exception) { } // not reachable yet: refused, reset or timed out
@@ -156,7 +155,7 @@ public sealed class LinkManager : IDisposable
         if (engine is null || _phone is not { } p || p.DeviceId != d.DeviceId || d.PairMode is not null) return;
         if (p.Address is not null) return; // the user's address wins over discovery
         _usb.PhonePort = d.Port;
-        if (UsbLink.Is(engine.Host, engine.Port) && _usb.Forwarded)
+        if (CableLink.Is(engine.Host, engine.Port) && _usb.Forwarded)
         {
             _lan = (d.Host, d.Port); // the cable wins; this is where to go when it's unplugged
             return;
@@ -165,14 +164,8 @@ public sealed class LinkManager : IDisposable
         else if (engine.State != EngineState.Connected) engine.Kick(); // also mid-attempt: the next wait is skipped
     }
 
-    Hello MyHello() => new(Core.Fingerprint.DeviceId(Fingerprint), Environment.MachineName, "windows", AppVersion(),
-        ["device", "calls.state", "calls.control", "calls.log", "sms.read", "sms.send", "notifications.read", "notifications.act", "photos.read", "drop", "clipboard", "ring", "media", "contacts.read", "contacts.write", "pc.notifications", "camera", "remote"]);
-
-    static string AppVersion()
-    {
-        var v = Package.Current.Id.Version;
-        return $"{v.Major}.{v.Minor}.{v.Build}";
-    }
+    Hello MyHello() => new(Palwyn.Core.Fingerprint.DeviceId(Fingerprint), Environment.MachineName, _host.Platform, _host.AppVersion,
+        [.. _host.PcCapabilities]);
 
     // ---- Pairing ----
 
@@ -200,11 +193,11 @@ public sealed class LinkManager : IDisposable
     async Task<PairedPhone> Adopt(DiscoveredPhone phone, byte[] fp)
     {
         await StopEngine();
-        var paired = new PairedPhone(Core.Fingerprint.DeviceId(fp), phone.Name ?? "Android phone", Hex.Of(fp),
+        var paired = new PairedPhone(Palwyn.Core.Fingerprint.DeviceId(fp), phone.Name ?? "Android phone", Hex.Of(fp),
             phone.Host, phone.Port, DateTimeOffset.UtcNow);
         Phones.Save(paired); // other paired phones stay; the new one becomes the one in use
-        AppSettings.ActivePhone = paired.DeviceId;
-        Log.Info($"Paired with phone {Core.Fingerprint.Display(paired.DeviceId)}");
+        _host.ActivePhone = paired.DeviceId;
+        _host.Log($"Paired with phone {Palwyn.Core.Fingerprint.Display(paired.DeviceId)}");
         StartEngine(paired);
         return paired;
     }
@@ -225,19 +218,19 @@ public sealed class LinkManager : IDisposable
             await StopEngine();
         }
         Phones.Remove(id);
-        App.PruneHistory(); // its notification history goes now, not at the next phone switch
-        Log.Info($"Removed phone {Core.Fingerprint.Display(id)}");
+        _host.OnPhoneRemoved(); // its notification history goes now, not at the next phone switch
+        _host.Log($"Removed phone {Palwyn.Core.Fingerprint.Display(id)}");
         if (inUse) UseNext();
-        else Publish(App.Current.Status); // the list changed; the link didn't
+        else Publish(_status); // the list changed; the link didn't
     }
 
     /// <summary>After the phone in use went away: carry on with another paired phone, or none.</summary>
     void UseNext()
     {
-        _ui.TryEnqueue(App.Current.OnLinkLost);
+        _host.Post(_host.OnLinkLost);
         if (Paired is { } next)
         {
-            AppSettings.ActivePhone = next.DeviceId;
+            _host.ActivePhone = next.DeviceId;
             StartEngine(next);
             Publish(new PhoneStatus(ConnectionState.Connecting, next.Name));
         }
@@ -249,9 +242,9 @@ public sealed class LinkManager : IDisposable
     {
         if (Paired?.DeviceId == deviceId || Phones.All().FirstOrDefault(p => p.DeviceId == deviceId) is not { } phone) return;
         await StopEngine();
-        AppSettings.ActivePhone = deviceId;
-        Log.Info($"Switched to phone {Core.Fingerprint.Display(deviceId)}");
-        _ui.TryEnqueue(App.Current.OnLinkLost); // the last phone's calls and notifications
+        _host.ActivePhone = deviceId;
+        _host.Log($"Switched to phone {Palwyn.Core.Fingerprint.Display(deviceId)}");
+        _host.Post(_host.OnLinkLost); // the last phone's calls and notifications
         StartEngine(phone);
         Publish(new PhoneStatus(ConnectionState.Connecting, phone.Name));
     }
@@ -262,10 +255,10 @@ public sealed class LinkManager : IDisposable
         if (Phones.All().FirstOrDefault(p => p.DeviceId == deviceId) is not { } phone) return;
         phone = phone with { Address = address };
         Phones.Save(phone);
-        Log.Info(address is null ? "Phone address cleared" : "Phone address set"); // not the address: it can identify a network
+        _host.Log(address is null ? "Phone address cleared" : "Phone address set"); // not the address: it can identify a network
         if (Paired?.DeviceId != deviceId)
         {
-            Publish(App.Current.Status);
+            Publish(_status);
             return;
         }
         await StopEngine();
@@ -283,7 +276,7 @@ public sealed class LinkManager : IDisposable
     {
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         await engine.RequestAsync(type, new JsonObject { ["callId"] = callId }, TimeSpan.FromSeconds(8));
-        Log.Info($"{type}: ok");
+        _host.Log($"{type}: ok");
     }
 
     /// <param name="query">Only calls whose contact name or number matches (searched on the phone).</param>
@@ -309,7 +302,7 @@ public sealed class LinkManager : IDisposable
     {
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         var reply = await engine.RequestAsync("CONTACT_SAVE", contact.ToSavePayload());
-        Log.Info(contact.Id.Length == 0 ? "Contact added" : "Contact edited"); // never the name
+        _host.Log(contact.Id.Length == 0 ? "Contact added" : "Contact edited"); // never the name
         return reply["id"]?.GetValue<string>() ?? contact.Id;
     }
 
@@ -318,7 +311,7 @@ public sealed class LinkManager : IDisposable
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         var reply = await engine.RequestAsync("CONTACT_DELETE", new JsonObject { ["id"] = id });
         if (reply["ok"]?.GetValue<bool>() != true) throw new PhoneErrorException("FAILED");
-        Log.Info("Contact deleted");
+        _host.Log("Contact deleted");
     }
 
     // ---- Messages ----
@@ -346,7 +339,7 @@ public sealed class LinkManager : IDisposable
     {
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         await engine.RequestAsync("SMS_SEND", new JsonObject { ["address"] = address, ["body"] = body }, TimeSpan.FromSeconds(75));
-        Log.Info($"SMS to {PhoneCall.Mask(address)}: sent");
+        _host.Log($"SMS to {PhoneCall.Mask(address)}: sent");
     }
 
     /// <summary>A group text: one MMS to every address. The phone waits up to 120 s for the carrier.</summary>
@@ -355,7 +348,7 @@ public sealed class LinkManager : IDisposable
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         var to = new JsonArray(addresses.Select(a => (JsonNode)JsonValue.Create(a)!).ToArray());
         await engine.RequestAsync("MMS_SEND", new JsonObject { ["addresses"] = to, ["body"] = body }, TimeSpan.FromSeconds(135));
-        Log.Info($"MMS to {addresses.Count} people: sent");
+        _host.Log($"MMS to {addresses.Count} people: sent");
     }
 
     /// <summary>The contact's picture as JPEG bytes, or null when it has none.</summary>
@@ -412,7 +405,7 @@ public sealed class LinkManager : IDisposable
     {
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         await engine.RequestAsync("CAMERA_REQUEST", new JsonObject());
-        Log.Info("Photo requested from the phone");
+        _host.Log("Photo requested from the phone");
     }
 
 
@@ -438,7 +431,7 @@ public sealed class LinkManager : IDisposable
             {
                 var started = Environment.TickCount64;
                 var (_, _, size) = await Transfers.PullAsync(link, kind, id, file, progress, ct);
-                Log.Info($"Received {kind}: {size / 1024} KB in {Environment.TickCount64 - started} ms");
+                _host.Log($"Received {kind}: {size / 1024} KB in {Environment.TickCount64 - started} ms");
             }
             File.Move(partial, path, overwrite: true);
         }
@@ -461,7 +454,7 @@ public sealed class LinkManager : IDisposable
         await using var link = await engine.OpenConnectionAsync(ct);
         var started = Environment.TickCount64;
         await Transfers.PushAsync(link, name, mime, source, size, progress, ct, folder: folder);
-        Log.Info($"Sent file: {size / 1024} KB in {Environment.TickCount64 - started} ms");
+        _host.Log($"Sent file: {size / 1024} KB in {Environment.TickCount64 - started} ms");
     }
 
     /// <summary>A PNG for the phone's clipboard, over its own connection.</summary>
@@ -471,7 +464,7 @@ public sealed class LinkManager : IDisposable
         await using var link = await engine.OpenConnectionAsync(CancellationToken.None);
         using var source = new MemoryStream(png);
         await Transfers.PushAsync(link, "clipboard.png", "image/png", source, png.Length, null, CancellationToken.None, kind: "clipboard");
-        Log.Info($"Clipboard image to phone: {png.Length / 1024} KB");
+        _host.Log($"Clipboard image to phone: {png.Length / 1024} KB");
     }
 
 
@@ -525,7 +518,7 @@ public sealed class LinkManager : IDisposable
     {
         var engine = _engine ?? throw new InvalidOperationException("not connected");
         await engine.RequestAsync("SCREEN_REQUEST", new JsonObject());
-        Log.Info("Phone screen requested");
+        _host.Log("Phone screen requested");
     }
 
     /// <summary>The connection the phone streams its screen on, after SCREEN_STATE "started".</summary>
@@ -609,13 +602,13 @@ public sealed class LinkManager : IDisposable
     {
         if (!ReferenceEquals(engine, _engine) || _phone is not { } phone) return;
         if (engine.LastError is { } err && state == EngineState.Waiting)
-            Log.Info($"Link: {state} ({err.GetType().Name}: {err.Message})");
-        else Log.Info($"Link: {state}");
+            _host.Log($"Link: {state} ({err.GetType().Name}: {err.Message})");
+        else _host.Log($"Link: {state}");
         // Events stop with the link, so the call card and the notification list would go stale.
         if (state != EngineState.Connected && _wasConnected)
         {
             (ConnectedSince, LastSeen, NowPlaying) = (null, DateTimeOffset.Now, null);
-            _ui.TryEnqueue(App.Current.OnLinkLost);
+            _host.Post(_host.OnLinkLost);
             Activity("", "Phone disconnected");
             Dashboard();
         }
@@ -627,12 +620,12 @@ public sealed class LinkManager : IDisposable
         }
         _wasConnected = state == EngineState.Connected;
         EmergencyHint(state);
-        if (state == EngineState.Waiting && UsbLink.Is(engine.Host, engine.Port)) _usb.Check(); // unplugged? then back to the network
+        if (state == EngineState.Waiting && CableLink.Is(engine.Host, engine.Port)) _usb.Check(); // unplugged? then back to the network
 
         switch (state)
         {
             case EngineState.Connected:
-                phone = UsbLink.Is(engine.Host, engine.Port) // the cable's address is no use once unplugged: keep the network one
+                phone = CableLink.Is(engine.Host, engine.Port) // the cable's address is no use once unplugged: keep the network one
                     ? phone with { Name = engine.Peer?.Name ?? phone.Name }
                     : phone with { Name = engine.Peer?.Name ?? phone.Name, Host = engine.Host, Port = engine.Port };
                 Phones.Save(phone);
@@ -664,15 +657,15 @@ public sealed class LinkManager : IDisposable
         switch (type)
         {
             case "REMOTE_POINTER" or "REMOTE_BUTTON" or "REMOTE_SCROLL" or "REMOTE_TEXT" or "REMOTE_KEY":
-                PcRemote.Input(type, p);
+                _host.OnRemoteInput(type, p);
                 return;
             case "SCREEN_STATE":
                 var state = p["state"]!.GetValue<string>();
-                Log.Info($"Phone screen: {state}");
-                _ui.TryEnqueue(() => ScreenWindow.OnState(state));
+                _host.Log($"Phone screen: {state}");
+                _host.Post(() => _host.OnScreenState(state));
                 return;
             case "PC_MEDIA" or "PC_VOLUME" or "PC_COMMAND" or "PC_LOCK":
-                var error = await PcRemote.ActAsync(type, p);
+                var error = await _host.OnRemoteActAsync(type, p);
                 var replyTo = m["id"]!.GetValue<string>();
                 try
                 {
@@ -691,46 +684,46 @@ public sealed class LinkManager : IDisposable
                 _charging = p["charging"]!.GetValue<bool>();
                 break;
             case "DEVICE_STATUS":
-                DeviceStatus = Core.DeviceStatus.From(p);
+                DeviceStatus = Palwyn.Core.DeviceStatus.From(p);
                 Dashboard();
                 return;
             case "MEDIA_STATE":
-                NowPlaying = Core.NowPlaying.From(p);
+                NowPlaying = Palwyn.Core.NowPlaying.From(p);
                 Dashboard();
                 return;
             case "CAPABILITIES_CHANGED":
-                Log.Info($"Phone capabilities: {string.Join(", ", engine.Capabilities)}");
+                _host.Log($"Phone capabilities: {string.Join(", ", engine.Capabilities)}");
                 Dashboard();
                 break;
             case "SMS_RECEIVED":
                 var sms = SmsMessage.FromEvent(p);
-                Log.Info($"SMS {(sms.Outgoing ? "sent" : "received")} {PhoneCall.Mask(sms.Address)}");
-                _ui.TryEnqueue(() => App.Current.OnSms(sms));
+                _host.Log($"SMS {(sms.Outgoing ? "sent" : "received")} {PhoneCall.Mask(sms.Address)}");
+                _host.Post(() => _host.OnSms(sms));
                 return;
             case "NOTIFICATION_POSTED":
                 var n = PhoneNotification.From(p);
-                _ui.TryEnqueue(() => App.Current.OnNotification(n));
+                _host.Post(() => _host.OnNotification(n));
                 return;
             case "NOTIFICATION_REMOVED":
                 var key = p["key"]!.GetValue<string>();
-                _ui.TryEnqueue(() => App.Current.OnNotificationRemoved(key));
+                _host.Post(() => _host.OnNotificationRemoved(key));
                 return;
             case "CLIPBOARD_SET":
                 var clip = p["text"]!.GetValue<string>();
-                _ui.TryEnqueue(() => ClipboardSync.Received(clip));
+                _host.Post(() => _host.OnClipboard(clip));
                 return;
             case "DROP_OFFER":
                 var offer = DropOffer.From(p);
-                Log.Info($"Phone shared {offer.Files.Count} files{(offer.Text is null ? "" : " and text")}");
-                _ui.TryEnqueue(() => Receiving.Accept(offer));
+                _host.Log($"Phone shared {offer.Files.Count} files{(offer.Text is null ? "" : " and text")}");
+                _host.Post(() => _host.OnDrop(offer));
                 return;
             case "CALL_STATE":
                 var call = PhoneCall.From(p);
-                Log.Info($"Call {call.State} {(call.Incoming ? "in" : "out")} {PhoneCall.Mask(call.Number)}");
-                _ui.TryEnqueue(() => App.Current.OnCall(call));
+                _host.Log($"Call {call.State} {(call.Incoming ? "in" : "out")} {PhoneCall.Mask(call.Number)}");
+                _host.Post(() => _host.OnCall(call));
                 return;
             case "UNPAIR":
-                Log.Info("Phone removed this PC");
+                _host.Log("Phone removed this PC");
                 Phones.Remove(phone.DeviceId);
                 _ = Task.Run(async () => // not awaited: we're running on the engine's own loop
                 {
@@ -742,9 +735,13 @@ public sealed class LinkManager : IDisposable
         Publish(new PhoneStatus(ConnectionState.Connected, phone.Name, _battery, _charging));
     }
 
-    void Publish(PhoneStatus status) => _ui.TryEnqueue(() => App.Current.SetStatus(status));
-    void Dashboard() => _ui.TryEnqueue(() => DashboardChanged?.Invoke());
-    void Activity(string glyph, string text) => _ui.TryEnqueue(() => RecentActivity.Add(glyph, text));
+    void Publish(PhoneStatus status)
+    {
+        _status = status;
+        _host.Post(() => _host.SetStatus(status));
+    }
+    void Dashboard() => _host.Post(() => DashboardChanged?.Invoke());
+    void Activity(string glyph, string text) => _host.Post(() => _host.OnActivity(glyph, text));
 
     public void Dispose()
     {

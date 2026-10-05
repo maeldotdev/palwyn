@@ -197,7 +197,7 @@ public sealed partial class HomePage : Page
         }
     }
 
-    static List<DashTile> BuildTiles(PhoneStatus s, Link.LinkManager link)
+    static List<DashTile> BuildTiles(PhoneStatus s, LinkManager link)
     {
         var tiles = new List<DashTile>();
         bool connected = s.State == ConnectionState.Connected;
