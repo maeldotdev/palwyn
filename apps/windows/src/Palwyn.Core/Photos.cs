@@ -30,12 +30,16 @@ public sealed record PhonePhoto(string Id, string? Name, DateTimeOffset Date, in
         return Path.Combine(folder, candidate);
     }
 
+    // Windows' list on every OS: Path.GetInvalidFileNameChars() on Linux is only '/' and NUL, and a Linux PC may save
+    // to an NTFS or FAT drive.
+    static readonly char[] WindowsInvalid = ['"', '<', '>', '|', ':', '*', '?', '\\', '/', .. Enumerable.Range(0, 32).Select(i => (char)i)];
+
     /// <summary>A file name that is safe on Windows, whatever the phone called it.</summary>
     public static string SafeFileName(string? name, string mime)
     {
         var n = name ?? "";
         n = n[(n.LastIndexOfAny(['/', '\\']) + 1)..]; // no folders; ":" etc. are replaced below
-        foreach (var c in Path.GetInvalidFileNameChars()) n = n.Replace(c, '_');
+        foreach (var c in WindowsInvalid) n = n.Replace(c, '_');
         n = n.Trim().TrimEnd('.');
         if (n.Length == 0 || n.Length > 200) n = mime.StartsWith("video/") ? "video.mp4" : "photo" + (mime == "image/png" ? ".png" : ".jpg");
         // Device names Windows reserves ("CON", "nul.txt", "COM1.jpg") would open a device, not a file.
