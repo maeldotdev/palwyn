@@ -24,6 +24,7 @@ Call metadata, SMS content, notification content, photos/files, clipboard, conta
 - Each install creates one **EC P-256** key pair and a self-signed X.509 certificate (20-year validity — trust comes from pinning, not from a CA or dates).
   - Android: generated inside **Android Keystore**, non-exportable; the keystore issues the self-signed cert.
   - Windows: persisted **CNG** key, non-exportable, in the CurrentUser\My store (SChannel needs a persisted key).
+  - Linux (in progress): a PKCS#8 file, `$XDG_DATA_HOME/palwyn/identity.key`, created with mode 0600, like an ssh key. Weaker than the other two: anything running as the user can copy it. A keyring (libsecret) is possible later; not every desktop runs one.
 - **Fingerprint** = SHA-256 of the DER certificate. This is the device's identity everywhere.
 - `deviceId` = first 16 bytes of the fingerprint, hex. Names are labels only and never used for trust.
 - Reinstalling the app = new identity = must re-pair (intended).

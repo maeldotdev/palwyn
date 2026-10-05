@@ -17,3 +17,4 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test apps/windows/tests/Palwyn.Core.Tests --nologo
+      - run: dotnet test apps/linux/tests/Palwyn.Linux.Tests --nologo

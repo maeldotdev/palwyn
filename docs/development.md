@@ -24,6 +24,14 @@ Icons are placeholders generated from Segoe Fluent Icons by `tools/make-icons.ps
 ### Core on Linux
 `Palwyn.Core` is plain `net10.0`, so its tests run on any OS with the .NET 10 SDK: `dotnet test apps/windows/tests/Palwyn.Core.Tests`. The Windows solution itself does not build on Linux. CI (`.github/workflows/ci.yml`) runs these tests on Ubuntu and Windows on every push.
 
+### Linux app (headless, in progress)
+`apps/linux/src/Palwyn.Linux` is a console app, `palwyn-linux`: `pair` (or `pair --address <ip>`), `run`, `status`, `unpair`. It needs the .NET 10 runtime, `avahi-browse` (avahi-utils) to find the phone, and `notify-send` (libnotify-bin) plus `gdbus` for desktop notifications. It stores its identity and paired phone in `$XDG_DATA_HOME/palwyn` (default `~/.local/share/palwyn`), and talks to phones running Palwyn 0.15 or later.
+
+```
+dotnet test apps/linux/tests/Palwyn.Linux.Tests
+dotnet run --project apps/linux/src/Palwyn.Linux -- pair
+```
+
 ### Android app
 - **Android Studio** (bundles the JDK and Gradle). The Android SDK already exists at `%LOCALAPPDATA%\Android\Sdk`.
 - Phone: Developer options → USB debugging on.
