@@ -88,6 +88,57 @@ public class ClipboardEchoTests
     public void Too_long_to_send() => Assert.False(new ClipboardEcho().ShouldSend(new string('x', 50_001)));
 }
 
+public class MprisParseTests
+{
+    [Fact]
+    public void Finds_the_players_in_ListNames()
+    {
+        const string names = "(['org.freedesktop.DBus', ':1.7', 'org.mpris.MediaPlayer2.spotify', 'org.gnome.Shell', 'org.mpris.MediaPlayer2.firefox.instance_1_23'],)";
+        Assert.Equal(["org.mpris.MediaPlayer2.spotify", "org.mpris.MediaPlayer2.firefox.instance_1_23"], Mpris.BusNames(names));
+    }
+
+    [Theory]
+    [InlineData("(<'Playing'>,)", "Playing")]
+    [InlineData("(<'Mozilla Firefox'>,)", "Mozilla Firefox")]
+    [InlineData("(<\"Don't Stop\">,)", "Don't Stop")]
+    [InlineData("(<'It\\'s'>,)", "It's")]
+    [InlineData("(<uint32 5>,)", null)]
+    public void Reads_a_string_property(string answer, string? expected) => Assert.Equal(expected, Mpris.FirstString(answer));
+
+    [Fact]
+    public void Reads_title_and_first_artist()
+    {
+        const string metadata = "(<{'mpris:trackid': <objectpath '/org/mpris/MediaPlayer2/Track/1'>, 'xesam:title': <\"Don't Look Back\">, " +
+                                "'xesam:artist': <['Mika', 'Someone']>, 'mpris:length': <int64 200000000>}>,)";
+        Assert.Equal(("Don't Look Back", "Mika"), Mpris.TitleAndArtist(metadata));
+        Assert.Equal((null, null), Mpris.TitleAndArtist("(<@a{sv} {}>,)"));
+    }
+}
+
+public class VolumeParseTests
+{
+    [Theory]
+    [InlineData("Volume: front-left: 26214 /  40% / -23.87 dB,   front-right: 26214 /  40% / -23.87 dB\n        balance 0.00", "Mute: no", 40, false)]
+    [InlineData("Volume: mono: 98304 / 150% / 10.57 dB", "Mute: yes", 100, true)]
+    public void Reads_pactl(string volume, string mute, int level, bool muted) =>
+        Assert.Equal((level, muted), Volume.Parse(volume, mute));
+
+    [Fact]
+    public void Nothing_without_a_percentage() => Assert.Null(Volume.Parse("Connection failure: Connection refused", ""));
+}
+
+public class KeysymTests
+{
+    [Theory]
+    [InlineData("a", 0x61u)]
+    [InlineData("ñ", 0xf1u)]
+    [InlineData("€", 0x010020acu)]
+    [InlineData("😀", 0x0101f600u)]
+    [InlineData("\n", 0xff0du)]
+    public void Characters_become_X_keysyms(string text, uint keysym) =>
+        Assert.Equal(keysym, XTest.KeysymFor(text.EnumerateRunes().First()));
+}
+
 public class IdentityFileTests
 {
     [Fact]

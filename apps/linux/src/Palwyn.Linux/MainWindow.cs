@@ -337,6 +337,21 @@ public sealed partial class MainWindow : Window
     // ---- Settings ----
 
     string? _removing;
+    readonly TextBox _commandName = new() { PlaceholderText = "Name, as the phone shows it", MinWidth = 220, Margin = new Thickness(0, 0, 8, 0) };
+    readonly TextBox _commandLine = new() { PlaceholderText = "Command, for example: systemctl suspend", MinWidth = 320, Margin = new Thickness(0, 0, 8, 0) };
+
+    /// <summary>A settings switch that saves and tells the phone what changed.</summary>
+    static ToggleSwitch Switch(string label, bool value, Action<bool> set)
+    {
+        var toggle = new ToggleSwitch { Content = label, IsChecked = value };
+        toggle.IsCheckedChanged += (_, _) =>
+        {
+            set(toggle.IsChecked == true);
+            App.Settings.Save();
+            App.Host.Remote.Update();
+        };
+        return toggle;
+    }
 
     Control SettingsPage()
     {
@@ -417,6 +432,42 @@ public sealed partial class MainWindow : Window
             App.ApplyTheme();
         };
         page.Children.Add(theme);
+
+        page.Children.Add(Text("Phone as a remote", 16, FontWeight.SemiBold));
+        page.Children.Add(Switch("Let the phone use this PC's mouse and keyboard", App.Settings.RemoteInput, on => App.Settings.RemoteInput = on));
+        if (App.Settings.RemoteInput && XTest.Problem is { } inputProblem) page.Children.Add(Text(inputProblem, 12, opacity: 0.7));
+        page.Children.Add(Switch("Let the phone control music, volume and locking", App.Settings.RemoteMedia, on => App.Settings.RemoteMedia = on));
+        page.Children.Add(Switch("Keep this PC awake while the phone is connected", App.Settings.KeepPcAwake, on =>
+        {
+            App.Settings.KeepPcAwake = on;
+            Session.KeepAwake(on && Link.IsConnected);
+        }));
+        page.Children.Add(Switch("Pause music and videos during calls", App.Settings.PauseMediaDuringCalls, on => App.Settings.PauseMediaDuringCalls = on));
+
+        page.Children.Add(Text("Commands the phone can run here (as you, without a terminal):", 13, opacity: 0.8));
+        foreach (var command in App.Settings.RemoteCommands)
+        {
+            var remove = new Button { Content = "Remove" };
+            remove.Click += (_, _) =>
+            {
+                App.Settings.RemoteCommands.Remove(command);
+                App.Settings.Save();
+                App.Host.Remote.Update();
+                Refresh();
+            };
+            page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Text($"{command.Name}: {command.Command}", 13), remove } });
+        }
+        var addCommand = new Button { Content = "Add" };
+        addCommand.Click += (_, _) =>
+        {
+            if ((_commandName.Text ?? "").Trim() is not { Length: > 0 } name || (_commandLine.Text ?? "").Trim() is not { Length: > 0 } line) return;
+            App.Settings.RemoteCommands.Add(new RemoteCommand(Guid.NewGuid().ToString("N")[..12], name.Length > 64 ? name[..64] : name, line));
+            App.Settings.Save();
+            App.Host.Remote.Update();
+            (_commandName.Text, _commandLine.Text) = ("", "");
+            Refresh();
+        };
+        page.Children.Add(new WrapPanel { Children = { Keep(_commandName), Keep(_commandLine), addCommand } });
 
         page.Children.Add(Text("About", 16, FontWeight.SemiBold));
         page.Children.Add(Text($"Palwyn {App.Host.AppVersion} for Linux. This PC's id: {Fingerprint.Display(Fingerprint.DeviceId(Link.Fingerprint))}", 13, opacity: 0.8));

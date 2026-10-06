@@ -103,6 +103,7 @@ public sealed class App : Application
     {
         Log.Info("Quitting");
         Link.Dispose();
+        Session.KeepAwake(false);
         _instance?.Dispose();
         ((IClassicDesktopStyleApplicationLifetime)ApplicationLifetime!).Shutdown();
     }

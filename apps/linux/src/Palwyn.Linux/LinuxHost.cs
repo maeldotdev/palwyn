@@ -28,6 +28,9 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public string? ViewingThread { get; set; }
 
     public PhoneStatus Status { get; private set; } = PhoneStatus.NotPaired;
+    /// <summary>The phone as a remote for this PC.</summary>
+    public RemoteControl Remote => _remote ??= new RemoteControl(settings, () => Link);
+    RemoteControl? _remote;
     public event Action? StatusChanged;
     /// <summary>Newest first, for Home.</summary>
     public List<(DateTimeOffset At, string Text)> Activity { get; } = [];
@@ -63,7 +66,7 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public string AppVersion => typeof(LinuxHost).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
     public IReadOnlyCollection<string> PcCapabilities { get; } =
         ["device", "calls.state", "calls.control", "calls.log", "sms.read", "sms.send", "notifications.read", "notifications.act",
-            "photos.read", "drop", "clipboard", "contacts.read", "contacts.write", "camera"];
+            "photos.read", "drop", "clipboard", "contacts.read", "contacts.write", "camera", "remote"];
 
     public string? ActivePhone
     {
@@ -79,6 +82,9 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     {
         Status = status;
         StatusChanged?.Invoke();
+        bool connected = status.State == ConnectionState.Connected;
+        Remote.Update();
+        Session.KeepAwake(connected && settings.KeepPcAwake);
     }
 
     public void OnActivity(string glyph, string text)
@@ -163,6 +169,7 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
         NotificationsChanged?.Invoke();
         Call = null;
         CallChanged?.Invoke();
+        _ = Remote.CallChangedAsync(false); // the call's state is unknown now: give the music back
         Then(() => _notifier.CloseAsync("call"));
     }
 
@@ -171,6 +178,7 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     public void OnCall(PhoneCall call)
     {
         Call = call;
+        _ = Remote.CallChangedAsync(call.State != CallState.Ended);
         CallChanged?.Invoke();
         if (call.State == CallState.Ringing && call.Id != _lastCallLogged)
         {
@@ -273,8 +281,8 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
     // Not built on Linux yet (later phases); the phone doesn't send these without the capability.
     public void OnScreenState(string state) { }
     public void OnEmergencyHint(AdbDevice device) { }
-    public void OnRemoteInput(string type, JsonObject payload) { }
-    public Task<string?> OnRemoteActAsync(string type, JsonObject payload) => Task.FromResult<string?>("NOT_CAPABLE");
+    public void OnRemoteInput(string type, JsonObject payload) => Remote.Input(type, payload);
+    public Task<string?> OnRemoteActAsync(string type, JsonObject payload) => Remote.ActAsync(type, payload);
 }
 
 /// <summary>No USB cable link on Linux yet (Phase 8).</summary>

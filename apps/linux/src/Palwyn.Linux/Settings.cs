@@ -47,6 +47,9 @@ public static class Paths
     }
 }
 
+/// <summary>A command the phone can run on this PC (Settings > Phone as a remote).</summary>
+public sealed record RemoteCommand(string Id, string Name, string Command);
+
 /// <summary>The user's choices, as a small JSON file in the config folder. Same names as the Windows app's settings.</summary>
 public sealed class Settings
 {
@@ -57,6 +60,15 @@ public sealed class Settings
     public bool NotificationHistory { get; set; } = true;
     /// <summary>Send every text copied on this PC to the phone. Off by default, as on Windows.</summary>
     public bool ClipboardToPhone { get; set; }
+    /// <summary>The phone may use this PC's mouse and keyboard. Off by default, as on Windows.</summary>
+    public bool RemoteInput { get; set; }
+    /// <summary>The phone may control music, volume and locking. On by default, as on Windows.</summary>
+    public bool RemoteMedia { get; set; } = true;
+    /// <summary>Commands the phone may run on this PC, set up by the user.</summary>
+    public List<RemoteCommand> RemoteCommands { get; set; } = [];
+    /// <summary>Hold off sleep while the phone is connected.</summary>
+    public bool KeepPcAwake { get; set; }
+    public bool PauseMediaDuringCalls { get; set; } = true;
     /// <summary>"system", "dark" or "light".</summary>
     public string Theme { get; set; } = "system";
 
