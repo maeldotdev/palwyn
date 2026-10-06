@@ -57,7 +57,7 @@ public static class QuickActions
     // ponytail: with several allowed phones on cables, the first one; a picker when that ever comes up.
     static Task<string?> OnCable(Action<AdbDevice> open)
     {
-        if (App.Current.Link.UsbDevices.FirstOrDefault(d => d.IsReady) is not { } device) return Task.FromResult<string?>(Emergency.EmergencyException.NoPhone);
+        if (App.Current.Link.UsbDevices.FirstOrDefault(d => d.IsReady) is not { } device) return Task.FromResult<string?>(Palwyn.Core.Emergency.EmergencyException.NoPhone);
         open(device);
         return Task.FromResult<string?>(null);
     }

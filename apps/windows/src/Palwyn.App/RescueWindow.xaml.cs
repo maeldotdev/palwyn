@@ -1,7 +1,7 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
-using Palwyn.App.Emergency;
+using Palwyn.Core.Emergency;
 using Palwyn.Core;
 using Windows.Graphics;
 using WinRT.Interop;

@@ -252,7 +252,7 @@ static class Toasts
         {
             // the phone may have changed since the hint: use the cable's allowed one now
             if (App.Current.Link.UsbDevices.FirstOrDefault(d => d.IsReady) is { } device) ScreenWindow.OpenEmergency(device);
-            else Error(Emergency.EmergencyException.NoPhone);
+            else Error(Palwyn.Core.Emergency.EmergencyException.NoPhone);
             return;
         }
         if (action == "reply" && e.Arguments.TryGetValue("address", out var address)

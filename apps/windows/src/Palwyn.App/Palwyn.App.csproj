@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
     <PackageReference Include="QRCoder" Version="1.8.0" />
     <Using Include="Palwyn.Core.Link" />
+    <Using Include="Palwyn.Core.Emergency" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Palwyn.Core\Palwyn.Core.csproj" />

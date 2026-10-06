@@ -41,6 +41,8 @@ public partial class App : Application
         catch (IOException) { } // one is still open in a viewer: it goes next time
         Log.Info($"Palwyn {v.Major}.{v.Minor}.{v.Build} starting");
 
+        Adb.Executable = Palwyn.App.Link.UsbLink.AdbPath; // the emergency screen and Rescue files (Core) use the same adb
+        Adb.Log = Log.Info;
         Link = new LinkManager(new WindowsHost(_ui!), Palwyn.App.Link.IdentityStore.Load(),
             Windows.Storage.ApplicationData.Current.LocalFolder.Path, new Palwyn.App.Link.PhoneDiscovery(), new Palwyn.App.Link.UsbLink()); // before the flyout, which listens to it
         Windows.Networking.Connectivity.NetworkInformation.NetworkStatusChanged += _ => Link.NetworkChanged();
@@ -260,7 +262,7 @@ public partial class App : Application
     public void Quit()
     {
         Log.Info("Quit requested");
-        Emergency.EmergencySession.CloseAll();
+        Palwyn.Core.Emergency.EmergencySession.CloseAll();
         Link?.Dispose();
         _tray?.Dispose();
         _main?.Close();

@@ -104,7 +104,12 @@ jobs:
           dotnet test apps/windows/tests/Palwyn.Core.Tests
           dotnet test apps/linux/tests/Palwyn.Linux.Tests
 
-      - name: AppImage and tar.gz
+      - uses: actions/setup-java@v4 # the emergency helper is built with Gradle
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: AppImage and tar.gz (with adb and the emergency helper)
         run: bash tools/linux/build-appimage.sh "$(grep -oP '<Version>\K[^<]+' apps/linux/src/Palwyn.Linux/Palwyn.Linux.csproj)"
 
       - uses: actions/upload-artifact@v4

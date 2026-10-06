@@ -1,13 +1,15 @@
 using System.Diagnostics;
-using Palwyn.App.Link;
 using Palwyn.Core;
 
-namespace Palwyn.App.Emergency;
+namespace Palwyn.Core.Emergency;
 
-/// <summary>Runs the bundled adb (UsbLink.AdbPath) for the emergency screen and Rescue files.</summary>
-static class Adb
+/// <summary>Runs adb for the emergency screen and Rescue files. Each PC app sets <see cref="Executable"/> (its bundled
+/// adb, else the SDK's or PATH's) and <see cref="Log"/> at start.</summary>
+public static class Adb
 {
-    public static bool Available => UsbLink.AdbPath is not null;
+    public static string? Executable { get; set; }
+    public static Action<string> Log { get; set; } = _ => { };
+    public static bool Available => Executable is not null;
 
     /// <summary>Exit code and standard output. Arguments are passed as a list, so paths need no quoting here
     /// (a remote shell command still does: AdbOutput.ShellQuote).</summary>
@@ -24,7 +26,7 @@ static class Adb
     /// <summary>A started adb process with redirected output (the caller reads or drains it).</summary>
     public static Process Start(params string[] args)
     {
-        var info = new ProcessStartInfo(UsbLink.AdbPath ?? throw new EmergencyException(EmergencyException.Failed))
+        var info = new ProcessStartInfo(Executable ?? throw new EmergencyException(EmergencyException.Failed))
         {
             CreateNoWindow = true,
             UseShellExecute = false,

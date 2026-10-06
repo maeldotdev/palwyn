@@ -55,7 +55,7 @@ public sealed partial class SettingsPage : Page
         EmergencyText.Text = devices.Any(d => d.IsReady)
             ? "Ready: this PC is allowed. If your phone's screen breaks, plug it in and open Emergency screen or Rescue files from the tray."
             : devices.Count > 0
-                ? Emergency.EmergencyException.NotAllowed
+                ? Palwyn.Core.Emergency.EmergencyException.NotAllowed
                 : "Not ready. Turn on USB debugging on your phone, plug it in once and tap \"Always allow from this computer\". Then, if its screen ever breaks, you can still see, control and copy from it here.";
     }
 

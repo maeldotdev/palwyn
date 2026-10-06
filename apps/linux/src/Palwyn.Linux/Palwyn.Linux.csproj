@@ -22,5 +22,7 @@
     <!-- Licences travel with the app (GPL, third-party notices, the font's OFL). -->
     <None Include="..\..\..\..\LICENSE;..\..\..\..\NOTICE" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\windows\src\Palwyn.App\Assets\Fonts\JetBrainsMono-OFL.txt" Link="JetBrainsMono-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- adb and the emergency helper, from tools/linux/fetch-deps.sh (not in git). -->
+    <None Include="Assets\adb\**;Assets\Emergency\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

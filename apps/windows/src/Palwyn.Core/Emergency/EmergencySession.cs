@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Palwyn.Core;
 
-namespace Palwyn.App.Emergency;
+namespace Palwyn.Core.Emergency;
 
 /// <summary>A message for the user, from the spec's error table.</summary>
 public sealed class EmergencyException(string message) : Exception(message)
@@ -66,13 +66,13 @@ public sealed class EmergencySession : IAsyncDisposable
             if (exit != 0 || !int.TryParse(port.Trim(), out session._port)) throw new EmergencyException(EmergencyException.Failed);
             await session.ConnectAsync(token, ct);
             lock (Open) Open.Add(session);
-            Log.Info($"Emergency screen opened ({session.Model})");
+            Adb.Log($"Emergency screen opened ({session.Model})");
             return session;
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             await session.DisposeAsync();
-            if (helper.HasExited) Log.Info($"Emergency helper exited: {(await errors).Trim()}");
+            if (helper.HasExited) Adb.Log($"Emergency helper exited: {(await errors).Trim()}");
             throw e as EmergencyException ?? new EmergencyException(EmergencyException.Failed);
         }
         catch
@@ -165,7 +165,7 @@ public sealed class EmergencySession : IAsyncDisposable
             await Adb.RunAsync(cts.Token, "-s", _serial, "shell", $"rm -f {Remote}; pkill -f {_socket}");
         }
         catch (Exception e) when (e is OperationCanceledException or EmergencyException) { } // the phone is gone: nothing left to clean
-        if (_client is not null) Log.Info($"Emergency screen closed ({Model})");
+        if (_client is not null) Adb.Log($"Emergency screen closed ({Model})");
     }
 
     /// <summary>On quit: no helper may outlive Palwyn.</summary>

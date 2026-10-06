@@ -31,6 +31,7 @@ Palwyn/
       src/Palwyn.Core/          net10.0 library — protocol, link, pairing, feature logic. No UI, no WinRT.
                                 Link/LinkManager.cs is the PC's link hub for both PC apps; each app implements
                                 Link/IPcHost.cs (UI thread, settings, where phone events go), discovery and USB.
+                                Emergency/ (adb runner, emergency session, Rescue, screen sources) is shared too.
       src/Palwyn.App/           WinUI 3 packaged app — tray, windows, Windows integrations (WindowsHost.cs)
       tests/Palwyn.Core.Tests/  xUnit
     linux/

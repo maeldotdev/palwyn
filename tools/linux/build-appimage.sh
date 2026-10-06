@@ -8,9 +8,13 @@ work="$root/build/linux"
 app="$work/Palwyn.AppDir"
 rm -rf "$work" && mkdir -p "$app/usr/bin" "$root/dist"
 
+# adb and the emergency-screen helper go inside (the helper needs a JDK and the Android SDK to build).
+bash "$root/tools/linux/fetch-deps.sh"
+
 # Self-contained: no .NET install needed on the user's PC.
 dotnet publish "$root/apps/linux/src/Palwyn.Linux" -c Release -r linux-x64 --self-contained \
   -p:Version="$version" -o "$app/usr/bin"
+chmod +x "$app/usr/bin/Assets/adb/adb"
 tar -C "$app/usr/bin" -czf "$root/dist/Palwyn-$version-linux-x64.tar.gz" .
 
 cp "$root/site/icon-192.png" "$app/palwyn.png"

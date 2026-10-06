@@ -57,6 +57,7 @@ public sealed partial class MainWindow : Window
         };
         App.Host.ActivityChanged += () => RefreshIf("home");
         Link.DashboardChanged += () => RefreshIf("home");
+        Link.UsbDevicesChanged += () => { RefreshIf("home"); RefreshIf("settings"); };
         App.Host.NotificationsChanged += () => RefreshIf("notifications");
         App.Host.CallChanged += () => RefreshIf("calls");
         App.Host.SmsReceived += OnSmsReceived;
@@ -89,6 +90,7 @@ public sealed partial class MainWindow : Window
         if (page == "notifications") _replyKey = item;
         if (page == "photos" && _photos.Count == 0) _ = LoadPhotosAsync();
         if (page == "contacts") { _editing = null; _ = LoadContactsAsync(); }
+        if (page == "settings") Link.CheckUsb(); // the emergency access line reflects the cable now
         UpdateViewing();
         Refresh();
     }
@@ -153,6 +155,23 @@ public sealed partial class MainWindow : Window
             var tiles = new WrapPanel();
             foreach (var (title, value, detailText) in Tiles(s)) tiles.Children.Add(TileView(title, value, detailText));
             page.Children.Add(tiles);
+        }
+        var actions = new WrapPanel();
+        void Action(string label, string target)
+        {
+            var b = new Button { Content = label, Margin = new Thickness(0, 0, 8, 8) };
+            b.Click += (_, _) => App.Open(target, null);
+            actions.Children.Add(b);
+        }
+        if (Link.IsConnected) Action("Phone screen", "screen");
+        if (Link.UsbDevices.Any(d => d.IsReady))
+        {
+            Action("Emergency screen", "emergency"); // on the cable: works even when the phone's screen or Palwyn doesn't
+            Action("Rescue files", "rescue");
+        }
+        if (actions.Children.Count > 0)
+        {
+            page.Children.Add(actions);
         }
 
         if (!App.HasTray)
@@ -337,6 +356,18 @@ public sealed partial class MainWindow : Window
     // ---- Settings ----
 
     string? _removing;
+
+    /// <summary>Whether the emergency screen would work now, and what's missing if not.</summary>
+    static string EmergencyAccess()
+    {
+        if (!Palwyn.Core.Emergency.Adb.Available) return "Not available: adb isn't bundled with this build or installed.";
+        var devices = Link.UsbDevices;
+        if (devices.FirstOrDefault(d => d.IsReady) is { } ready) return $"Ready: {ready.Model?.Replace('_', ' ') ?? "your phone"} allows this PC.";
+        if (devices.Any(d => d.State == "unauthorized")) return "On the phone, tick \"Always allow from this computer\" and tap Allow.";
+        if (devices.Any(d => d.State == "no"))
+            return "This PC isn't allowed to open the phone's USB connection. Install your distribution's Android udev rules (android-sdk-platform-tools-common on Ubuntu and Debian, android-tools on Fedora, android-udev on Arch), then plug the phone in again.";
+        return "Not set up: plug in your phone with USB debugging on.";
+    }
     readonly TextBox _commandName = new() { PlaceholderText = "Name, as the phone shows it", MinWidth = 220, Margin = new Thickness(0, 0, 8, 0) };
     readonly TextBox _commandLine = new() { PlaceholderText = "Command, for example: systemctl suspend", MinWidth = 320, Margin = new Thickness(0, 0, 8, 0) };
 
@@ -468,6 +499,10 @@ public sealed partial class MainWindow : Window
             Refresh();
         };
         page.Children.Add(new WrapPanel { Children = { Keep(_commandName), Keep(_commandLine), addCommand } });
+
+        page.Children.Add(Text("Emergency access", 16, FontWeight.SemiBold));
+        page.Children.Add(Text(EmergencyAccess(), 13, opacity: 0.8));
+        page.Children.Add(Text("If the phone's screen ever breaks, plug it into this PC to see and control it and copy its files, with nothing to tap on the phone. It only works if you set it up now: Developer options > USB debugging on, then plug in and tick \"Always allow from this computer\".", 12, opacity: 0.7));
 
         page.Children.Add(Text("About", 16, FontWeight.SemiBold));
         page.Children.Add(Text($"Palwyn {App.Host.AppVersion} for Linux. This PC's id: {Fingerprint.Display(Fingerprint.DeviceId(Link.Fingerprint))}", 13, opacity: 0.8));

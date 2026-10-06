@@ -278,9 +278,15 @@ public sealed class LinuxHost(Settings settings, Action<Action>? post = null) : 
         }
     }
 
-    // Not built on Linux yet (later phases); the phone doesn't send these without the capability.
-    public void OnScreenState(string state) { }
-    public void OnEmergencyHint(AdbDevice device) { }
+    /// <summary>SCREEN_STATE from the phone (started, declined, stopped), on the UI thread.</summary>
+    public event Action<string>? ScreenState;
+    public void OnScreenState(string state) => ScreenState?.Invoke(state);
+
+    /// <summary>The paired phone hasn't answered for a while, but it's allowed on the cable: the emergency screen works.</summary>
+    public void OnEmergencyHint(AdbDevice device) =>
+        Then(() => _notifier.ShowAsync("emergency", "Palwyn", "Your phone isn't answering",
+            "It's on the USB cable, so you can still see and control it: open the emergency screen.",
+            [("default", "Emergency screen")], _ => Post(() => Open?.Invoke("emergency", device.Serial))));
     public void OnRemoteInput(string type, JsonObject payload) => Remote.Input(type, payload);
     public Task<string?> OnRemoteActAsync(string type, JsonObject payload) => Remote.ActAsync(type, payload);
 }

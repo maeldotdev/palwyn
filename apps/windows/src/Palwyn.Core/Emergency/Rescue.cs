@@ -1,6 +1,6 @@
 using Palwyn.Core;
 
-namespace Palwyn.App.Emergency;
+namespace Palwyn.Core.Emergency;
 
 public sealed record RescueResult(int Copied, int Skipped, int Failed);
 
@@ -9,7 +9,7 @@ public sealed record RescueResult(int Copied, int Skipped, int Failed);
 /// even when Palwyn's phone app is frozen. Other apps' private data isn't reachable (Android). A file already on the PC
 /// with the same size and date is skipped, so running it again copies only what's new.
 /// </summary>
-static class Rescue
+public static class Rescue
 {
     public static readonly string[] Folders = ["DCIM", "Pictures", "Movies", "Music", "Download", "Documents", "Android/media"];
 
@@ -40,7 +40,7 @@ static class Rescue
             else failed++;
             progress.Report((copied + skipped + failed, files.Count));
         }
-        Log.Info($"Rescue: copied {copied}, skipped {skipped}, failed {failed}");
+        Adb.Log($"Rescue: copied {copied}, skipped {skipped}, failed {failed}");
         return new RescueResult(copied, skipped, failed);
     }
 

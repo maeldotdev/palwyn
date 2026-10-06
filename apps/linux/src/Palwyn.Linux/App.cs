@@ -10,6 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Palwyn.Core;
+using Palwyn.Core.Emergency;
 using Palwyn.Core.Link;
 
 namespace Palwyn.Linux;
@@ -36,6 +37,9 @@ public sealed class App : Application
     CallWindow? _call;
     TrayIcon? _tray;
     NativeMenuItem? _trayStatus;
+    readonly NativeMenuItem _trayScreen = new("Phone screen") { IsEnabled = false };
+    readonly NativeMenuItem _trayEmergency = new("Emergency screen") { IsEnabled = false };
+    readonly NativeMenuItem _trayRescue = new("Rescue files") { IsEnabled = false };
 
     public override void Initialize()
     {
@@ -64,12 +68,16 @@ public sealed class App : Application
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown; // closing the window keeps the link running
         Log.Prune();
         Host = new LinuxHost(Settings, action => Dispatcher.UIThread.Post(action));
-        Link = new LinkManager(Host, IdentityFile.Load(Paths.Data), Paths.Data, Discovery, new NoUsb());
+        Adb.Executable = LinuxUsb.FindAdb(); // the cable link, the emergency screen and Rescue files
+        Adb.Log = Log.Info;
+        Link = new LinkManager(Host, IdentityFile.Load(Paths.Data), Paths.Data, Discovery, new LinuxUsb());
         Host.Link = Link;
         // The clipboard belongs to a window; the main window exists (hidden) from here on.
         Host.Clipboard = new ClipboardSync(Settings, () => (_main ??= new MainWindow()).Clipboard);
         Host.StatusChanged += () => Host.Clipboard.Update(Link.IsConnected);
-        Host.Open = ShowMain;
+        Host.Open = Open;
+        Host.ScreenState += ScreenWindow.OnState;
+        Link.UsbDevicesChanged += UpdateTray;
         Host.CallChanged += () => (_call ??= new CallWindow()).Show(Host.Call);
         Log.Info($"Palwyn {Host.AppVersion} starting");
 
@@ -99,11 +107,36 @@ public sealed class App : Application
         _main!.QueueFiles(paths);
     }
 
+    /// <summary>A page of the main window, or one of the phone screen and Rescue windows ("screen", "emergency",
+    /// "rescue"; <paramref name="item"/>: a cable serial).</summary>
+    public void Open(string page, string? item)
+    {
+        switch (page)
+        {
+            case "screen":
+                ScreenWindow.Open();
+                return;
+            case "emergency" or "rescue":
+                if (Link.UsbDevices.FirstOrDefault(d => d.IsReady && (item is null || d.Serial == item)) is not { } device)
+                {
+                    ShowMain("settings"); // Settings says what the cable needs
+                    return;
+                }
+                if (page == "emergency") ScreenWindow.OpenEmergency(device);
+                else RescueWindow.Open(device);
+                return;
+            default:
+                ShowMain(page, item);
+                return;
+        }
+    }
+
     public void Quit()
     {
         Log.Info("Quitting");
         Link.Dispose();
         Session.KeepAwake(false);
+        EmergencySession.CloseAll();
         _instance?.Dispose();
         ((IClassicDesktopStyleApplicationLifetime)ApplicationLifetime!).Shutdown();
     }
@@ -117,13 +150,16 @@ public sealed class App : Application
         open.Click += (_, _) => ShowMain();
         var add = new NativeMenuItem("Add a phone");
         add.Click += (_, _) => ShowMain("add");
+        _trayScreen.Click += (_, _) => Open("screen", null);
+        _trayEmergency.Click += (_, _) => Open("emergency", null);
+        _trayRescue.Click += (_, _) => Open("rescue", null);
         var quit = new NativeMenuItem("Quit Palwyn");
         quit.Click += (_, _) => Quit();
         _tray = new TrayIcon
         {
             Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://palwyn-linux/Assets/icon.png"))),
             ToolTipText = "Palwyn",
-            Menu = new NativeMenu { Items = { _trayStatus, new NativeMenuItemSeparator(), open, add, new NativeMenuItemSeparator(), quit } },
+            Menu = new NativeMenu { Items = { _trayStatus, new NativeMenuItemSeparator(), open, _trayScreen, _trayEmergency, _trayRescue, add, new NativeMenuItemSeparator(), quit } },
         };
         // No anchored flyout as on Windows: Wayland doesn't tell apps where the tray icon is.
         _tray.Clicked += (_, _) => ShowMain();
@@ -135,6 +171,8 @@ public sealed class App : Application
         if (_tray is null || _trayStatus is null) return;
         var text = StatusText(Host.Status);
         _trayStatus.Header = text;
+        _trayScreen.IsEnabled = Link.IsConnected;
+        _trayEmergency.IsEnabled = _trayRescue.IsEnabled = Link.UsbDevices.Any(d => d.IsReady); // a phone allowed on the cable
         _tray.ToolTipText = $"Palwyn: {text}";
     }
 
